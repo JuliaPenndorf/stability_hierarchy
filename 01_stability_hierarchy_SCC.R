@@ -7,11 +7,14 @@ library(stringr)
 library(reshape2)
 library(aniDom)
 require(plyr)
-
-
+library(lme4)
+library(tidyverse)
+library(ggbump)
 # LOAD DATA
 agg_2019 <- read.csv('soc_data_2019.csv',stringsAsFactors = F)
 agg_2022 <- read.csv('agg_data_2022.csv',stringsAsFactors = F)
+sexing_gen_2019 <-read.csv2('genetics_sexings_20210419.csv',stringsAsFactors = F)
+sexing_eye_2019 <-read.csv2('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
 
 relatedness <- read.csv('self_relatedness.csv',stringsAsFactors = F)
 ids <- make.unique(relatedness$X)
@@ -140,6 +143,39 @@ summary(lmm)
 plot(ranks_CG_2022$ranks_CG_2022~ ranks_CG_2022$rank_2019,
      xlab="Rank 2019",
      ylab="Rank 2022")
-abline(x~y, col="red")
+abline(lmm, col="red")
 
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="5"] <-"X5"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="11"] <-"X11"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="31"] <-"X31"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="35"] <-"X35"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="40"] <-"X40"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="42"] <-"X42"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="31"] <-"X31"
+sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="78"] <-"X78"
+ranks_CG_2022$sex <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2022$ID_2019,
+                                                        sexing_eye_2019$ID_Site)]
+ranks_CG_2022$sex[ranks_CG_2022$ID_2019=="BGN_V_BA"] <- "F"
+ranks_CG_2022$sex[ranks_CG_2022$ID_2019=="X31"] <- "F"
+
+## males 
+ranks_CG_males <- ranks_CG_2022[which(ranks_CG_2022$sex=="M"),]
+lmm_m <- lm(ranks_CG_males$ranks_CG_2022~ ranks_CG_males$rank_2019)
+summary(lmm_m)
+
+## females 
+ranks_CG_females <- ranks_CG_2022[which(ranks_CG_2022$sex=="F"),]
+lmm_f <- lm(ranks_CG_females$ranks_CG_2022~ ranks_CG_females$rank_2019)
+summary(lmm_f)
+
+
+# You need the MASS library
+library(MASS)
+
+# Vector color
+isMale <- ifelse(ranks_CG_2022$sex=="M","blue","lightcoral")
+
+# Make the graph !
+parcoord(ranks_CG_2022[,c(3,1)] , col= isMale
+         )
 
