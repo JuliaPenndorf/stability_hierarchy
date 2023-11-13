@@ -10,10 +10,12 @@ require(plyr)
 library(lme4)
 library(tidyverse)
 library(ggbump)
+library(rptR)
+
 # LOAD DATA
 agg_2019 <- read.csv('soc_data_2019.csv',stringsAsFactors = F)
-agg_2022 <- read.csv('agg_data_2022.csv',stringsAsFactors = F)
-sexing_gen_2019 <-read.csv2('genetics_sexings_20210419.csv',stringsAsFactors = F)
+agg_2022 <- read.csv('agg_data_cleaned.csv',stringsAsFactors = F)
+sexing_gen_2019 <-read.csv('Vector_IDs_15July.csv',stringsAsFactors = F)
 sexing_eye_2019 <-read.csv2('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
 
 relatedness <- read.csv('self_relatedness.csv',stringsAsFactors = F)
@@ -66,7 +68,7 @@ agg_2022_sub <- agg_2022[which(agg_2022$Winner %in%ids$ID_2022 &
 
 # subsetting to CG
 ### subsetting individuals with >= 5 interactions at the site in 2019
-agg_CG_2019 <- agg_2019_sub#[which(agg_2019_sub$LOCATION=="CG"),]
+agg_CG_2019 <- agg_2019_sub[which(agg_2019_sub$LOCATION=="CG"),]
 
 inds_CG_2019 <- c(agg_CG_2019$WINNER,agg_CG_2019$LOSER)
 inds_CG_2019_summary <-as.data.frame(table(inds_CG_2019))
@@ -168,14 +170,38 @@ ranks_CG_females <- ranks_CG_2022[which(ranks_CG_2022$sex=="F"),]
 lmm_f <- lm(ranks_CG_females$ranks_CG_2022~ ranks_CG_females$rank_2019)
 summary(lmm_f)
 
+ranks_CG_2019$Year <- "2019"
+ranks_CG_2019$ID <- rownames(ranks_CG_2019)
+ranks_CG_2019$Sex <- sexing_gen_2019$Sex[match(ranks_CG_2019$ID,
+                                               sexing_gen_2019$Social_ID)]
+ranks_CG_2019$Sex[is.na(ranks_CG_2019$Sex)] <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2019$ID[is.na(ranks_CG_2019$Sex)],
+                                                                                  sexing_eye_2019$ID_Site )]
+colnames(ranks_CG_2019)[1] <- "Rank"
+ranks_CG_2019$Sex[ranks_CG_2019$ID=="X31"]<-"F"
 
-# You need the MASS library
-library(MASS)
+ranks_CG_2022$Year <- "2022"
+ranks_CG_2022$ID <- ranks_CG_2022$ID_2019
+ranks_CG_2022$Sex <- sexing_gen_2019$Sex[match(ranks_CG_2022$ID_2019,
+                                               sexing_gen_2019$Social_ID)]
+ranks_CG_2022$Sex[is.na(ranks_CG_2022$Sex)] <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2022$ID_2019[is.na(ranks_CG_2022$Sex)],
+                                                                                  sexing_eye_2019$ID_Site )]
+ranks_CG_2022$Sex[ranks_CG_2022$ID_2019=="BGN_V_BA"]<-"M"
+ranks_CG_2022$Sex[ranks_CG_2022$ID_2019=="X31"]<-"F"
 
-# Vector color
-isMale <- ifelse(ranks_CG_2022$sex=="M","blue","lightcoral")
+colnames(ranks_CG_2022)[1] <- "Rank"
 
-# Make the graph !
-parcoord(ranks_CG_2022[,c(3,1)] , col= isMale
-         )
+ranks_CG_2022_sub <- ranks_CG_2022[,which(colnames(ranks_CG_2022)%in%colnames(ranks_CG_2019))]
+DominanceScore<-rbind(ranks_CG_2019,ranks_CG_2022_sub)
 
+Rpt_model <- rptGaussian(Rank ~ Year + Sex + (1|ID), 
+                         grname=c("ID"), 
+                         data = DominanceScore, 
+                         nboot=1000, 
+                         npermut=0,
+                         adjusted = TRUE)
+print(Rpt_model)
+summary(Rpt_model)
+summary(Rpt_model$mod)
+plot(Rpt_model, grname = names(Rpt_model$ngroups), scale = c("link",
+                                             "original"), type = c("boot", "permut"), main = NULL,
+     breaks = "FD", xlab = NULL)
