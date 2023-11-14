@@ -145,19 +145,6 @@ ranks_CG_2022 <-rank(-mean_2022)
 ranks_CG_2022<-as.data.frame(ranks_CG_2022)
 
 
-# # replace ids depending on years$
-# ranks_CG_2022$ID_2019 <- ids$ID_2019[match(rownames(ranks_CG_2022),
-#                                            ids$ID_2022)]
-# ranks_CG_2022$rank_2019 <- ranks_CG_2019$ranks_CG_2019[match(ranks_CG_2022$ID_2019,
-#                                                       rownames(ranks_CG_2019))]
-# cor.test(ranks_CG_2022$ranks_CG_2022,ranks_CG_2022$rank_2019)
-# 
-# lmm <- lm(ranks_CG_2022$ranks_CG_2022~ ranks_CG_2022$rank_2019)
-# summary(lmm)
-# plot(ranks_CG_2022$ranks_CG_2022~ ranks_CG_2022$rank_2019,
-#      xlab="Rank 2019",
-#      ylab="Rank 2022")
-# abline(lmm, col="red")
 
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="5"] <-"X5"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="11"] <-"X11"
@@ -167,20 +154,7 @@ sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="40"] <-"X40"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="42"] <-"X42"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="31"] <-"X31"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="78"] <-"X78"
-# ranks_CG_2022$sex <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2022$ID_2019,
-#                                                         sexing_eye_2019$ID_Site)]
-# ranks_CG_2022$sex[ranks_CG_2022$ID_2019=="BGN_V_BA"] <- "F"
-# ranks_CG_2022$sex[ranks_CG_2022$ID_2019=="X31"] <- "F"
-# 
-# ## males 
-# ranks_CG_males <- ranks_CG_2022[which(ranks_CG_2022$sex=="M"),]
-# lmm_m <- lm(ranks_CG_males$ranks_CG_2022~ ranks_CG_males$rank_2019)
-# summary(lmm_m)
-# 
-# ## females 
-# ranks_CG_females <- ranks_CG_2022[which(ranks_CG_2022$sex=="F"),]
-# lmm_f <- lm(ranks_CG_females$ranks_CG_2022~ ranks_CG_females$rank_2019)
-# summary(lmm_f)
+
 
 ranks_CG_2019$Year <- "2019"
 ranks_CG_2019$ID <- rownames(ranks_CG_2019)
