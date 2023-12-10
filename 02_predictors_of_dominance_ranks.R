@@ -311,10 +311,21 @@ rank.CG.2022$sex <- sexing_2022$assigned_sex[match(rank.CG.2022$ID,sexing_2022$I
 
 rank_tot <- rbind(rank,rank.CG.2022[,2:ncol(rank.CG.2022)])
 rank_tot$age[rank_tot$age==""] <- NA
+
+exclude1 <-intersect(rank.CG$ID,rank.BA$ID)
+exclude2<-intersect(rank.CG$ID,rank.NB$ID)
+exclude3 <- intersect(rank.NB$ID,rank.BA$ID)
+
+exclude <- unique(c(exclude1,exclude2,exclude3))
+`%ni%` <- Negate(`%in%`)
+
+rank_sub <- rank_tot[which(rank_tot$ID %ni% exclude),]
+
+
 predict.rank <- lmer(st_rank ~ age+at.roost+
                                sex+
                               (1|group),
-                     data=rank_tot,
+                     data=rank_sub,
                      na.action="na.omit")
 summary(predict.rank)
 
@@ -328,8 +339,16 @@ predict.rank.2019 <- lmer(st_rank ~ age+at.roost +
                      data=rank,
                      na.action="na.omit")
 summary(predict.rank.2019)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank)
 
-### MALES ONLY
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+
+## MALES ONLY
 males1 <- vector[which(vector$Sex=="M"),]
 males2 <- marking[which(marking$SAssigned_Sex=="M"),]
 
@@ -605,14 +624,16 @@ rank$at.roost <- rank$group ==rank$roost
 rank$age <- vector$Corrected_Age[match(rank$ID,vector$Bird_ID)]
 rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)],marking$ID_Site)]
 
+rank_sub_m <- rank[which(rank$ID %ni% exclude),]
 
 
-predict.rank.m.2019 <- lmer(st_rank ~ age+at.roost +
-                       (1|ID) +
-                       (1|group),
-                     data=rank,
+predict.rank.m.2019 <- lmer(st_rank ~ age+#
+                       #        at.roost +
+                       # 
+                        (1|group),
+                     data=rank_sub_m,
                      na.action="na.omit",
-                     control=lmerControl(optimizer="Nelder_Mead",
+                     control=lmerControl(optimizer="bobyqa",
                                         optCtrl=list(maxfun=2e5)),)
 summary(predict.rank.m.2019)
 afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
@@ -630,13 +651,12 @@ rank.CG.m.2022$at.roost <- rank.CG.m.2022$group ==rank.CG.m.2022$roost
 
 rank.CG.m.2022$age <- sexing_2022$assigned_age[match(rank.CG.m.2022$ID,sexing_2022$ID)]
 
+rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
 
-rank_tot_m <- rbind(rank,rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
-
-predict.rank.m.tot <- lmer(st_rank ~ age*at.roost +
-                              (1|ID) +
+predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
+                              #(1|ID) +
                               (1|group),
-                            data=rank_tot_m,
+                         ,data=rank_sub_m,
                             na.action="na.omit",
                             control=lmerControl(optimizer="bobyqa",
                                                 optCtrl=list(maxfun=2e5)),)
@@ -648,3 +668,481 @@ aa <- allFit(predict.rank.m.tot)
 is.OK <- sapply(aa,is,"merMod")  
 aa.OK <- aa[is.OK]
 lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+
+
+
+
+
+
+
+## CG 2022
+males_2022 <- sexing_2022$ID[sexing_2022$assigned_sex=="M"]
+CG_2022_m <- agg_2022[which(agg_2022$Location=="CG"& 
+                            agg_2022$Winner %in%males_2022 &
+                              agg_2022$Loser%in%males_2022),]
+
+winners.CG.m <- as.vector(CG_2022_m$Winner)
+losers.CG.m <- as.vector(CG_2022_m$Loser)
+
+####### Checking number interactions per indiv (july)
+CGr_win_CG <- as.data.frame(table(winners.CG.m))
+CGr_loss_CG <- as.data.frame(table(losers.CG.m))
+names(CGr_win_CG) <- c("ID", "wins")
+names(CGr_loss_CG) <- c("ID", "loss")
+
+
+int <- rbind.fill(CGr_win_CG[c("wins","ID")], CGr_loss_CG[c("ID","loss")])
+int2 <- rbind(int[c("ID","wins", "loss")])
+int2[is.na(int2)] <- 0
+CGr.int.CG <-aggregate(int2[,2:3], list(int2[,1]), sum)
+names(CGr.int.CG) <- c("ID", "wins", "los")
+
+for (i in 1:nrow(CGr.int.CG)){ 
+  CGr.int.CG$total[i] <- sum(CGr.int.CG[i,2]+CGr.int.CG[i,3])
+}
+
+CGr.int.CG$over10 <- CGr.int.CG$total>=10
+
+
+### DOES INDIVIDUAL HAVE >10 int ?
+CG.ids.over10 <- CGr.int.CG[which(CGr.int.CG$over10==TRUE),]
+
+
+######## calculate scores
+CG_2022_m$areBoth = ((CG_2022_m$Winner %in% CG.ids.over10$ID) & (CG_2022_m$Loser %in% CG.ids.over10$ID))
+CG.over10_m <- CG_2022_m[which(CG_2022_m$areBoth==TRUE),]
+
+winners.CG.m.2022 <- as.vector(CG.over10_m$Winner)
+losers.CG.m.2022 <- as.vector(CG.over10_m$Loser)
+
+scores.CG.m.2022 <- elo_scores(winners=winners.CG.m.2022,
+                        losers=losers.CG.m.2022,
+                        randomise=TRUE,
+                        sigmoid.param=1/300,
+                        K=200,
+                        n.rands=10000,
+                        return.as.ranks = TRUE
+)
+
+beep(2)
+scores.CG.m.2022 <- as.data.frame(scores.CG.m.2022)
+######## calculate ranks
+for (i in 1:nrow(scores.CG.m.2022)) { 
+  scores.CG.m.2022$Med.rank [i] <- rowMeans(scores.CG.m.2022)[i]
+}
+
+rank.CG.m.2022 <- as.data.frame(scores.CG.m.2022$Med.rank)
+rank.CG.m.2022$rank <- rank(rank.CG.m.2022, na.last = TRUE)
+rank.CG.m.2022$ID <- rownames(scores.CG.m.2022)
+
+rank.CG.m.2022$st_rank <-rank.CG.m.2022$rank/max(rank.CG.m.2022$rank)
+rank.CG.m.2022$group <-"CG"
+
+
+
+
+
+rank <- rbind(rank.BA[,2:5],rank.CG[,2:5],rank.NB[,2:5])
+
+rank$roost <- roost$ROOST[match(rank$ID,roost$ID)]
+
+rank$at.roost <- rank$group ==rank$roost
+
+rank$age <- vector$Corrected_Age[match(rank$ID,vector$Bird_ID)]
+rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)],marking$ID_Site)]
+
+rank_sub_m <- rank[which(rank$ID %ni% exclude),]
+
+
+predict.rank.m.2019 <- lmer(st_rank ~ age+#
+                       #        at.roost +
+                       # 
+                        (1|group),
+                     data=rank_sub_m,
+                     na.action="na.omit",
+                     control=lmerControl(optimizer="bobyqa",
+                                        optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.2019)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+rank.CG.m.2022$roost <- roost_2022$roost[match(rank.CG.m.2022$ID,roost_2022$ID)]
+rank.CG.m.2022$group <-"CG 2022"
+rank.CG.m.2022$at.roost <- rank.CG.m.2022$group ==rank.CG.m.2022$roost
+
+
+rank.CG.m.2022$age <- sexing_2022$assigned_age[match(rank.CG.m.2022$ID,sexing_2022$ID)]
+
+rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
+
+predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
+                              #(1|ID) +
+                              (1|group),
+                         ,data=rank_sub_m,
+                            na.action="na.omit",
+                            control=lmerControl(optimizer="bobyqa",
+                                                optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.tot)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank.m.tot)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## FEMALES ONLY
+females1 <- vector[which(vector$Sex=="F"),]
+females2 <- marking[which(marking$SAssigned_Sex=="F"),]
+
+females <- c(females1$Bird_ID,females2$ID_Site)
+agg$both.females <- agg$WINNER %in%females &agg$LOSER %in%females
+
+
+CG <- agg[which(agg$LOCATION=="CG" & (agg$both.females==TRUE)),]
+
+winners.CG <- as.vector(CG$WINNER)
+losers.CG <- as.vector(CG$LOSER)
+
+####### Checking number interactions per indiv (july)
+nbr_win <- as.data.frame(table(winners.CG))
+nbr_loss <- as.data.frame(table(losers.CG))
+
+nbr_win_CG <- as.data.frame(table(winners.CG))
+nbr_loss_CG <- as.data.frame(table(losers.CG))
+names(nbr_win_CG) <- c("ID", "wins")
+names(nbr_loss_CG) <- c("ID", "loss")
+
+
+int <- rbind.fill(nbr_win_CG[c("wins","ID")], nbr_loss_CG[c("ID","loss")])
+int2 <- rbind(int[c("ID","wins", "loss")])
+int2[is.na(int2)] <- 0
+nbr.int.CG <-aggregate(int2[,2:3], list(int2[,1]), sum)
+names(nbr.int.CG) <- c("ID", "wins", "los")
+
+for (i in 1:nrow(nbr.int.CG)){ 
+  nbr.int.CG$total[i] <- sum(nbr.int.CG[i,2]+nbr.int.CG[i,3])
+}
+
+nbr.int.CG$over10 <- nbr.int.CG$total>=10
+
+
+### DOES INDIVIDUAL HAVE >10 int ?
+CG.ids.over10 <- nbr.int.CG[which(nbr.int.CG$over10==TRUE),]
+
+
+######## calculate scores
+CG$areBoth = ((CG$WINNER %in% CG.ids.over10$ID) & (CG$LOSER %in% CG.ids.over10$ID))
+CG.over10 <- CG[which(CG$areBoth==TRUE),]
+
+winners.CG <- as.vector(CG.over10$WINNER)
+losers.CG <- as.vector(CG.over10$LOSER)
+
+scores.CG <- elo_scores(winners=winners.CG,
+                        losers=losers.CG,
+                        randomise=TRUE,
+                        sigmoid.param=1/300,
+                        K=200,
+                        n.rands=10000,
+                        return.as.ranks = TRUE
+)
+
+
+beep(5)
+scores.CG <- as.data.frame(scores.CG)
+######## calculate ranks
+for (i in 1:nrow(scores.CG)) { 
+  scores.CG$Med.rank [i] <- rowMeans(scores.CG)[i]
+}
+
+rank.CG <- as.data.frame(scores.CG$Med.rank)
+rank.CG$rank <- rank(rank.CG, na.last = TRUE)
+rank.CG$ID <- rownames(scores.CG)
+
+rank.CG$st_rank <-rank.CG$rank/max(rank.CG$rank)
+rank.CG$group <-"CG"
+
+
+## CG 2022
+females_2022 <- sexing_2022$ID[sexing_2022$assigned_sex=="F"]
+CG_2022_m <- agg_2022[which(agg_2022$Location=="CG"& 
+                              agg_2022$Winner %in%females_2022 &
+                              agg_2022$Loser%in%females_2022),]
+
+winners.CG.m <- as.vector(CG_2022_m$Winner)
+losers.CG.m <- as.vector(CG_2022_m$Loser)
+
+####### Checking number interactions per indiv (july)
+CGr_win_CG <- as.data.frame(table(winners.CG.m))
+CGr_loss_CG <- as.data.frame(table(losers.CG.m))
+names(CGr_win_CG) <- c("ID", "wins")
+names(CGr_loss_CG) <- c("ID", "loss")
+
+
+int <- rbind.fill(CGr_win_CG[c("wins","ID")], CGr_loss_CG[c("ID","loss")])
+int2 <- rbind(int[c("ID","wins", "loss")])
+int2[is.na(int2)] <- 0
+CGr.int.CG <-aggregate(int2[,2:3], list(int2[,1]), sum)
+names(CGr.int.CG) <- c("ID", "wins", "los")
+
+for (i in 1:nrow(CGr.int.CG)){ 
+  CGr.int.CG$total[i] <- sum(CGr.int.CG[i,2]+CGr.int.CG[i,3])
+}
+
+CGr.int.CG$over10 <- CGr.int.CG$total>=10
+
+
+### DOES INDIVIDUAL HAVE >10 int ?
+CG.ids.over10 <- CGr.int.CG[which(CGr.int.CG$over10==TRUE),]
+
+
+######## calculate scores
+CG_2022_m$areBoth = ((CG_2022_m$Winner %in% CG.ids.over10$ID) & (CG_2022_m$Loser %in% CG.ids.over10$ID))
+CG.over10_m <- CG_2022_m[which(CG_2022_m$areBoth==TRUE),]
+
+winners.CG.m.2022 <- as.vector(CG.over10_m$Winner)
+losers.CG.m.2022 <- as.vector(CG.over10_m$Loser)
+
+scores.CG.m.2022 <- elo_scores(winners=winners.CG.m.2022,
+                               losers=losers.CG.m.2022,
+                               randomise=TRUE,
+                               sigmoid.param=1/300,
+                               K=200,
+                               n.rands=10000,
+                               return.as.ranks = TRUE
+)
+
+beep(2)
+scores.CG.m.2022 <- as.data.frame(scores.CG.m.2022)
+######## calculate ranks
+for (i in 1:nrow(scores.CG.m.2022)) { 
+  scores.CG.m.2022$Med.rank [i] <- rowMeans(scores.CG.m.2022)[i]
+}
+
+rank.CG.m.2022 <- as.data.frame(scores.CG.m.2022$Med.rank)
+rank.CG.m.2022$rank <- rank(rank.CG.m.2022, na.last = TRUE)
+rank.CG.m.2022$ID <- rownames(scores.CG.m.2022)
+
+rank.CG.m.2022$st_rank <-rank.CG.m.2022$rank/max(rank.CG.m.2022$rank)
+rank.CG.m.2022$group <-"CG"
+
+
+
+
+
+rank <- rbind(rank.CG[,2:5])
+
+rank$roost <- roost$ROOST[match(rank$ID,roost$ID)]
+
+rank$at.roost <- rank$group ==rank$roost
+
+rank$age <- vector$Corrected_Age[match(rank$ID,vector$Bird_ID)]
+rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)],marking$ID_Site)]
+
+rank_sub_m <- rank[which(rank$ID %ni% exclude),]
+
+
+predict.rank.m.2019 <- lm(st_rank ~ age#+#
+                              #        at.roost +
+                              # 
+                              #(1|group)
+                          ,
+                            data=rank_sub_m,
+                            na.action="na.omit",
+                            control=lmerControl(optimizer="bobyqa",
+                                                optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.2019)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+rank.CG.m.2022$roost <- roost_2022$roost[match(rank.CG.m.2022$ID,roost_2022$ID)]
+rank.CG.m.2022$group <-"CG 2022"
+rank.CG.m.2022$at.roost <- rank.CG.m.2022$group ==rank.CG.m.2022$roost
+
+
+rank.CG.m.2022$age <- sexing_2022$assigned_age[match(rank.CG.m.2022$ID,sexing_2022$ID)]
+
+rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
+
+predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
+                             #(1|ID) +
+                             (1|group),
+                           ,data=rank_sub_m,
+                           na.action="na.omit",
+                           control=lmerControl(optimizer="bobyqa",
+                                               optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.tot)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank.m.tot)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+
+
+
+
+
+
+
+## CG 2022
+males_2022 <- sexing_2022$ID[sexing_2022$assigned_sex=="M"]
+CG_2022_m <- agg_2022[which(agg_2022$Location=="CG"& 
+                              agg_2022$Winner %in%males_2022 &
+                              agg_2022$Loser%in%males_2022),]
+
+winners.CG.m <- as.vector(CG_2022_m$Winner)
+losers.CG.m <- as.vector(CG_2022_m$Loser)
+
+####### Checking number interactions per indiv (july)
+CGr_win_CG <- as.data.frame(table(winners.CG.m))
+CGr_loss_CG <- as.data.frame(table(losers.CG.m))
+names(CGr_win_CG) <- c("ID", "wins")
+names(CGr_loss_CG) <- c("ID", "loss")
+
+
+int <- rbind.fill(CGr_win_CG[c("wins","ID")], CGr_loss_CG[c("ID","loss")])
+int2 <- rbind(int[c("ID","wins", "loss")])
+int2[is.na(int2)] <- 0
+CGr.int.CG <-aggregate(int2[,2:3], list(int2[,1]), sum)
+names(CGr.int.CG) <- c("ID", "wins", "los")
+
+for (i in 1:nrow(CGr.int.CG)){ 
+  CGr.int.CG$total[i] <- sum(CGr.int.CG[i,2]+CGr.int.CG[i,3])
+}
+
+CGr.int.CG$over10 <- CGr.int.CG$total>=10
+
+
+### DOES INDIVIDUAL HAVE >10 int ?
+CG.ids.over10 <- CGr.int.CG[which(CGr.int.CG$over10==TRUE),]
+
+
+######## calculate scores
+CG_2022_m$areBoth = ((CG_2022_m$Winner %in% CG.ids.over10$ID) & (CG_2022_m$Loser %in% CG.ids.over10$ID))
+CG.over10_m <- CG_2022_m[which(CG_2022_m$areBoth==TRUE),]
+
+winners.CG.m.2022 <- as.vector(CG.over10_m$Winner)
+losers.CG.m.2022 <- as.vector(CG.over10_m$Loser)
+
+scores.CG.m.2022 <- elo_scores(winners=winners.CG.m.2022,
+                               losers=losers.CG.m.2022,
+                               randomise=TRUE,
+                               sigmoid.param=1/300,
+                               K=200,
+                               n.rands=10000,
+                               return.as.ranks = TRUE
+)
+
+beep(2)
+scores.CG.m.2022 <- as.data.frame(scores.CG.m.2022)
+######## calculate ranks
+for (i in 1:nrow(scores.CG.m.2022)) { 
+  scores.CG.m.2022$Med.rank [i] <- rowMeans(scores.CG.m.2022)[i]
+}
+
+rank.CG.m.2022 <- as.data.frame(scores.CG.m.2022$Med.rank)
+rank.CG.m.2022$rank <- rank(rank.CG.m.2022, na.last = TRUE)
+rank.CG.m.2022$ID <- rownames(scores.CG.m.2022)
+
+rank.CG.m.2022$st_rank <-rank.CG.m.2022$rank/max(rank.CG.m.2022$rank)
+rank.CG.m.2022$group <-"CG"
+
+
+
+
+
+rank <- rbind(rank.BA[,2:5],rank.CG[,2:5],rank.NB[,2:5])
+
+rank$roost <- roost$ROOST[match(rank$ID,roost$ID)]
+
+rank$at.roost <- rank$group ==rank$roost
+
+rank$age <- vector$Corrected_Age[match(rank$ID,vector$Bird_ID)]
+rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)],marking$ID_Site)]
+
+rank_sub_m <- rank[which(rank$ID %ni% exclude),]
+
+
+predict.rank.m.2019 <- lmer(st_rank ~ age+#
+                              #        at.roost +
+                              # 
+                              (1|group),
+                            data=rank_sub_m,
+                            na.action="na.omit",
+                            control=lmerControl(optimizer="bobyqa",
+                                                optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.2019)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+rank.CG.m.2022$roost <- roost_2022$roost[match(rank.CG.m.2022$ID,roost_2022$ID)]
+rank.CG.m.2022$group <-"CG 2022"
+rank.CG.m.2022$at.roost <- rank.CG.m.2022$group ==rank.CG.m.2022$roost
+
+
+rank.CG.m.2022$age <- sexing_2022$assigned_age[match(rank.CG.m.2022$ID,sexing_2022$ID)]
+
+rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
+
+predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
+                             #(1|ID) +
+                             (1|group),
+                           ,data=rank_sub_m,
+                           na.action="na.omit",
+                           control=lmerControl(optimizer="bobyqa",
+                                               optCtrl=list(maxfun=2e5)),)
+summary(predict.rank.m.tot)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+eval(parse(text=getURL(afurl)))
+aa <- allFit(predict.rank.m.tot)
+
+is.OK <- sapply(aa,is,"merMod")  
+aa.OK <- aa[is.OK]
+lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+
+
+
+
+
+
+
+
