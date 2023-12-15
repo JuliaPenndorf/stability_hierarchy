@@ -120,8 +120,7 @@ elo_CG_2019 <- elo_scores(winners=agg_CG_2019_sub$WINNER,
                           dates = NULL)
 mean_2019 <- rowMeans(as.matrix(elo_CG_2019))
 names(mean_2019) <- rownames(elo_CG_2019)
-ranks_CG_2019 <-rank(-mean_2019)
-ranks_CG_2019 <- as.data.frame(ranks_CG_2019)
+# ranks_CG_2019 <-rank(-mean_2019)
 
 ### 2022
 #####  calculating rank 2022
@@ -133,7 +132,7 @@ elo_CG_2022 <- elo_scores(winners=agg_CG_2022_sub$Winner,
                           identities = NULL, 
                           sigmoid.param = 1/300, 
                           K = 200, 
-                          init.score = 0, 
+                          init.score = mean_2019, 
                           randomise = TRUE, 
                           n.rands = 10000, 
                           return.as.ranks = FALSE, 
@@ -143,7 +142,6 @@ mean_2022 <- rowMeans(as.matrix(elo_CG_2022))
 names(mean_2022) <- rownames(elo_CG_2022)
 ranks_CG_2022 <-rank(-mean_2022)
 ranks_CG_2022<-as.data.frame(ranks_CG_2022)
-
 
 
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="5"] <-"X5"
@@ -193,6 +191,34 @@ ranks_CG_2022$Age <- sexing_gen_2019$Age[match(ranks_CG_2022$ID,
                                                sexing_gen_2019$Social_ID)]
 ranks_CG_2022$Age[is.na(ranks_CG_2022$Age)] <- sexing_eye_2019$Assigned_Age[match(ranks_CG_2022$ID[is.na(ranks_CG_2022$Age)],
                                                                                   sexing_eye_2019$ID_Site )]
+
+
+
+similarity_years <- NA
+
+for (i in 1:ncol(elo_CG_2019)) {
+  rank_CG_2019_ov <- as.data.frame(elo_CG_2019[,i])
+  rank_CG_2019_ov$id <- rownames(elo_CG_2019)
+  rank_CG_2019_ov$rank <- rank(-rank_CG_2019_ov[,1])
+  rank_CG_2019 <- rank_CG_2019_ov %>% arrange(desc(-rank_CG_2019_ov$rank),decreasing=F)
+  
+  rank_CG_2022_ov <- as.data.frame(elo_CG_2022[,i])
+  rank_CG_2022_ov$ID2022 <- rownames(elo_CG_2022)
+  rank_CG_2022_ov$rank <- rank(-rank_CG_2022_ov[,1])
+  rank_CG_2022 <- rank_CG_2022_ov %>% arrange(desc(-rank_CG_2022_ov$rank),decreasing=F)
+  rank_CG_2022$id <- ids$ID_2019[match(rank_CG_2022$ID2022,ids$ID_2022)]
+
+  
+  similarity_years[i] <- dyadic_similarity(rank_CG_2019$id, rank_CG_2022$id)
+  
+}
+
+similarity_random <- NA
+for (i in 1:10000) {
+      random_2019<- sample(rank_CG_2019$id,size=nrow(rank_CG_2019),replace=F)
+      random_2022 <- sample(rank_CG_2022$id,size=nrow(rank_CG_2022),replace=F)
+      similarity_random[i] <- dyadic_similarity(random_2019, random_2022)
+}
 
 
 

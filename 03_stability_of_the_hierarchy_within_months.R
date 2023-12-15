@@ -7,9 +7,11 @@
 
 
 #load packages
-library (aniDom)
+library(aniDom)
 library(reshape2)
 library(plyr)
+library(dplyr)
+library(DynaRankR)
 
 #load data
 agg <- read.csv('soc_data_2019.csv', stringsAsFactors = FALSE,header = T,row.names = 1)
@@ -54,10 +56,8 @@ CG_scores_jul <- elo_scores(winners=CG_winners_jul,
                         sigmoid.param=1/300,
                         K=200,
                         n.rands=10000,
-                        return.as.ranks = TRUE
+                        return.as.ranks = F
 )
-
-
 
 CG_scores_jul <- as.data.frame(CG_scores_jul)
 
@@ -72,6 +72,8 @@ CG_rank_jul$ID <- rownames(CG_scores_jul)
 CG_rank_jul$period <- "July"
 CG_rank_jul$site <- "CG"
 colnames(CG_rank_jul)[1] <- "meanRank"
+init_scores_CG_for_sept <- CG_scores_jul$Med.rank
+names(init_scores_CG_for_sept) <- rownames(CG_scores_jul)
 
 CG_sept_sub <- CG_sept[which(CG_sept$WINNER %in% inds_CG_both&
                            CG_sept$LOSER %in% inds_CG_both),]
@@ -84,7 +86,8 @@ CG_scores_sept <- elo_scores(winners=CG_winners_sept,
                             sigmoid.param=1/300,
                             K=200,
                             n.rands=10000,
-                            return.as.ranks = TRUE
+                            init.score = init_scores_CG_for_sept,
+                            return.as.ranks = F
 )
 
 CG_scores_sept <- as.data.frame(CG_scores_sept)
@@ -103,6 +106,48 @@ CG_rank_sept$site <- "CG"
 colnames(CG_rank_sept)[1] <- "meanRank"
 
 
+similarity_CG <- NA
+dynamics_CG <-list()
+
+for (i in 1:ncol(CG_scores_jul)) {
+  # DYNAMIC SIMILARITY
+      rank_CG_jul_ov <- as.data.frame(CG_scores_jul[,i])
+      rank_CG_jul_ov$id <- rownames(CG_scores_jul)
+      rank_CG_jul_ov$rank <- rank(-rank_CG_jul_ov[,1])
+      rank_CG_jul <- rank_CG_jul_ov %>% arrange(desc(-rank_CG_jul_ov$rank),decreasing=F)
+  
+      rank_CG_sept_ov <- as.data.frame(CG_scores_sept[,i])
+      rank_CG_sept_ov$id <- rownames(CG_scores_sept)
+      rank_CG_sept_ov$rank <- rank(-rank_CG_sept_ov[,1])
+      rank_CG_sept <- rank_CG_sept_ov %>% arrange(desc(-rank_CG_sept_ov$rank),decreasing=F)
+      
+      similarity_CG[i] <- dyadic_similarity(rank_CG_jul$id, rank_CG_sept$id)
+      
+  # HIERACHY DYNAMICS
+      # period_1 <- rep(2019,times=nrow(CG_scores_jul))
+      # period_2 <- rep(2020,times=nrow(CG_scores_sept))
+      # period <- c(period_1,period_2)
+      # jul_df <- CG_scores_jul[order(CG_scores_jul[,i],decreasing = T),]
+      # sept_df <- CG_scores_jul[order(CG_scores_jul[,i],decreasing = T),]
+      # jul <- rank(-jul_df[,i])
+      # sept <- rank(-sept_df[,i])
+      # ids <- c(rownames(jul_df),rownames(sept_df))
+      # scores <- c(jul,sept)
+      # df <- as.data.frame(cbind(period,ids,scores))
+      # colnames(df) <- c("period","id","rank")
+      # df$rank <- as.numeric(df$rank)
+      # dynamics_CG[[i]] <- get_dynamics(ranks = df, 
+      #                                  type = 'rank')
+
+}
+
+
+similarityCG_random <- NA
+for (i in 1:10000) {
+  random_CG_jul<- sample(rank_CG_jul$id,size=nrow(rank_CG_jul),replace=F)
+  random_CG_sept <- sample(rank_CG_sept$id,size=nrow(rank_CG_sept),replace=F)
+  similarityCG_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
+}
 
 # BA
 BA_jul <- agg[which(agg$LOCATION=="BA" &
@@ -137,7 +182,7 @@ BA_scores_jul <- elo_scores(winners=BA_winners_jul,
                             sigmoid.param=1/300,
                             K=200,
                             n.rands=10000,
-                            return.as.ranks = TRUE
+                            return.as.ranks = F
 )
 
 
@@ -155,6 +200,9 @@ BA_rank_jul$ID <- rownames(BA_scores_jul)
 BA_rank_jul$period <- "July"
 BA_rank_jul$site <- "BA"
 colnames(BA_rank_jul)[1] <- "meanRank"
+init_scores_BA_for_sept <- BA_scores_jul$Med.rank
+names(init_scores_BA_for_sept) <- rownames(BA_scores_jul)
+
 
 BA_sept_sub <- BA_sept[which(BA_sept$WINNER %in% inds_BA_both &
                              BA_sept$LOSER %in% inds_BA_both),]
@@ -167,7 +215,8 @@ BA_scores_sept <- elo_scores(winners=BA_winners_sept,
                              sigmoid.param=1/300,
                              K=200,
                              n.rands=10000,
-                             return.as.ranks = TRUE
+                             init.score = init_scores_BA_for_sept,
+                             return.as.ranks = F
 )
 
 BA_scores_sept <- as.data.frame(BA_scores_sept)
@@ -185,6 +234,30 @@ BA_rank_sept$period <- "September"
 BA_rank_sept$site <- "BA"
 colnames(BA_rank_sept)[1] <- "meanRank"
 
+
+similarity_BA <- NA
+
+for (i in 1:ncol(BA_scores_jul)) {
+  rank_BA_jul_ov <- as.data.frame(BA_scores_jul[,i])
+  rank_BA_jul_ov$id <- rownames(BA_scores_jul)
+  rank_BA_jul_ov$rank <- rank(-rank_BA_jul_ov[,1])
+  rank_BA_jul <- rank_BA_jul_ov %>% arrange(desc(-rank_BA_jul_ov$rank),decreasing=F)
+  
+  rank_BA_sept_ov <- as.data.frame(BA_scores_sept[,i])
+  rank_BA_sept_ov$id <- rownames(BA_scores_sept)
+  rank_BA_sept_ov$rank <- rank(-rank_BA_sept_ov[,1])
+  rank_BA_sept <- rank_BA_sept_ov %>% arrange(desc(-rank_BA_sept_ov$rank),decreasing=F)
+  
+  similarity_BA[i] <- dyadic_similarity(rank_BA_jul$id, rank_BA_sept$id)
+  
+}
+
+similarityBA_random <- NA
+for (i in 1:10000) {
+  random_BA_jul<- sample(rank_BA_jul$id,size=nrow(rank_BA_jul),replace=F)
+  random_BA_sept <- sample(rank_BA_sept$id,size=nrow(rank_BA_sept),replace=F)
+  similarityBA_random[i] <- dyadic_similarity(random_BA_jul, random_BA_sept)
+}
 
 
 
@@ -221,7 +294,7 @@ NB_scores_jul <- elo_scores(winners=NB_winners_jul,
                             sigmoid.param=1/300,
                             K=200,
                             n.rands=10000,
-                            return.as.ranks = TRUE
+                            return.as.ranks = F
 )
 
 
@@ -239,6 +312,8 @@ NB_rank_jul$ID <- rownames(NB_scores_jul)
 NB_rank_jul$period <- "July"
 NB_rank_jul$site <- "NB"
 colnames(NB_rank_jul)[1] <- "meanRank"
+init_scores_NB_for_sept <- NB_scores_jul$Med.rank
+names(init_scores_NB_for_sept) <- rownames(NB_scores_jul)
 
 NB_sept_sub <- NB_sept[which(NB_sept$WINNER %in% inds_NB_both &
                              NB_sept$LOSER %in% inds_NB_both),]
@@ -251,7 +326,8 @@ NB_scores_sept <- elo_scores(winners=NB_winners_sept,
                              sigmoid.param=1/300,
                              K=200,
                              n.rands=10000,
-                             return.as.ranks = TRUE
+                             init.score = init_scores_NB_for_sept,
+                             return.as.ranks = F
 )
 
 NB_scores_sept <- as.data.frame(NB_scores_sept)
@@ -268,6 +344,30 @@ NB_rank_sept$ID <- rownames(NB_scores_sept)
 NB_rank_sept$period <- "September"
 NB_rank_sept$site <- "NB"
 colnames(NB_rank_sept)[1] <- "meanRank"
+
+similarity_NB <- NA
+
+for (i in 1:ncol(NB_scores_jul)) {
+  rank_NB_jul_ov <- as.data.frame(NB_scores_jul[,i])
+  rank_NB_jul_ov$id <- rownames(NB_scores_jul)
+  rank_NB_jul_ov$rank <- rank(-rank_NB_jul_ov[,1])
+  rank_NB_jul <- rank_NB_jul_ov %>% arrange(desc(-rank_NB_jul_ov$rank),decreasing=F)
+  
+  rank_NB_sept_ov <- as.data.frame(NB_scores_sept[,i])
+  rank_NB_sept_ov$id <- rownames(NB_scores_sept)
+  rank_NB_sept_ov$rank <- rank(-rank_NB_sept_ov[,1])
+  rank_NB_sept <- rank_NB_sept_ov %>% arrange(desc(-rank_NB_sept_ov$rank),decreasing=F)
+  
+  similarity_NB[i] <- dyadic_similarity(rank_NB_jul$id, rank_NB_sept$id)
+  
+}
+similarityNB_random <- NA
+for (i in 1:10000) {
+  random_NB_jul<- sample(rank_NB_jul$id,size=nrow(rank_NB_jul),replace=F)
+  random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
+  similarityNB_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
+}
+
 
 ranks_complete <- rbind(CG_rank_jul,
                         CG_rank_sept,
