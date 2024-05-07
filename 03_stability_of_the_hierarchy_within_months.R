@@ -19,7 +19,7 @@ agg$WINNER[agg$WINNER=="VPTsm_H_CG"] <- "VPT_H_CG" #correcting typo
 agg$LOSER[agg$LOSER=="VPTsm_H_CG"] <- "VPT_H_CG" #correcting typo
 
 sexing_gen_2019 <-read.csv('Vector_IDs_15July.csv',stringsAsFactors = F)
-sexing_eye_2019 <-read.csv2('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
+sexing_eye_2019 <-read.csv('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
 
 IDs <- as.data.frame(unique(c(agg$WINNER,agg$WINNER)))
 
@@ -149,6 +149,176 @@ for (i in 1:10000) {
   similarityCG_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
 }
 
+
+# CALCULATE SIMILARITY WITHIN AGE-GROUPS 
+adults <- c(unique(sexing_gen_2019$Social_ID[which(sexing_gen_2019$Age=="A")],
+                   sexing_eye_2019$ID_Site[which(sexing_eye_2019$Assigned_Age=="A")]))
+juveniles <- c(unique(sexing_gen_2019$Social_ID[which(sexing_gen_2019$Age=="J")],
+                   sexing_eye_2019$ID_Site[which(sexing_eye_2019$Assigned_Age=="J")]))
+
+males <- c(unique(sexing_gen_2019$Social_ID[which(sexing_gen_2019$Sex=="M")],
+                      sexing_eye_2019$ID_Site[which(sexing_eye_2019$Assigned_Sex=="M")]))
+females <- c(unique(sexing_gen_2019$Social_ID[which(sexing_gen_2019$Sex=="F")],
+                  sexing_eye_2019$ID_Site[which(sexing_eye_2019$Assigned_Sex=="F")]))
+
+
+## ADULTS
+similarity_CG_ad <- NA
+#dynamics_CG_ad <-list()
+
+elo_CG_jul_adults <- CG_scores_jul[which(rownames(CG_scores_jul) %in% adults),1:10000]
+elo_CG_2022_adults <- CG_scores_sept[which(rownames(CG_scores_sept) %in% adults),1:10000]
+
+
+
+for (i in 1:ncol(elo_CG_jul_adults)) {
+  # DYNAMIC SIMILARITY
+  rank_CG_jul_ov <- as.data.frame(elo_CG_jul_adults[,i])
+  rank_CG_jul_ov$id <- rownames(elo_CG_jul_adults)
+  rank_CG_jul_ov$rank <- rank(-rank_CG_jul_ov[,1])
+  rank_CG_jul <- rank_CG_jul_ov %>% arrange(desc(-rank_CG_jul_ov$rank),decreasing=F)
+  
+  rank_CG_sept_ov <- as.data.frame(elo_CG_2022_adults[,i])
+  rank_CG_sept_ov$id <- rownames(elo_CG_2022_adults)
+  rank_CG_sept_ov$rank <- rank(-rank_CG_sept_ov[,1])
+  rank_CG_sept <- rank_CG_sept_ov %>% arrange(desc(-rank_CG_sept_ov$rank),decreasing=F)
+  
+  similarity_CG_ad[i] <- dyadic_similarity(rank_CG_jul$id, rank_CG_sept$id)
+}
+
+
+similarityCG_adults_random <- NA
+for (i in 1:10000) {
+  random_CG_jul<- sample(rank_CG_jul$id,size=nrow(rank_CG_jul),replace=F)
+  random_CG_sept <- sample(rank_CG_sept$id,size=nrow(rank_CG_sept),replace=F)
+  similarityCG_adults_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
+}
+
+mean(similarity_CG_ad)
+sd(similarity_CG_ad)
+
+mean(similarityCG_adults_random)
+sd(similarityCG_adults_random)
+
+## JUVENILES
+similarity_CG_juv <- NA
+#dynamics_CG_ad <-list()
+
+elo_CG_jul_juv <- CG_scores_jul[which(rownames(CG_scores_jul) %in% juveniles),1:10000]
+elo_CG_sept_juv <- CG_scores_sept[which(rownames(CG_scores_sept) %in% juveniles),1:10000]
+
+
+
+for (i in 1:ncol(elo_CG_jul_juv)) {
+  # DYNAMIC SIMILARITY
+  rank_CG_jul_ov <- as.data.frame(elo_CG_jul_juv[,i])
+  rank_CG_jul_ov$id <- rownames(elo_CG_jul_juv)
+  rank_CG_jul_ov$rank <- rank(-rank_CG_jul_ov[,1])
+  rank_CG_jul <- rank_CG_jul_ov %>% arrange(desc(-rank_CG_jul_ov$rank),decreasing=F)
+  
+  rank_CG_sept_ov <- as.data.frame(elo_CG_sept_juv[,i])
+  rank_CG_sept_ov$id <- rownames(elo_CG_sept_juv)
+  rank_CG_sept_ov$rank <- rank(-rank_CG_sept_ov[,1])
+  rank_CG_sept <- rank_CG_sept_ov %>% arrange(desc(-rank_CG_sept_ov$rank),decreasing=F)
+  
+  similarity_CG_juv[i] <- dyadic_similarity(rank_CG_jul$id, rank_CG_sept$id)
+}
+
+
+similarityCG_juv_random <- NA
+for (i in 1:10000) {
+  random_CG_jul<- sample(rank_CG_jul$id,size=nrow(rank_CG_jul),replace=F)
+  random_CG_sept <- sample(rank_CG_sept$id,size=nrow(rank_CG_sept),replace=F)
+  similarityCG_juv_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
+}
+
+mean(similarity_CG_juv)
+sd(similarity_CG_juv)
+
+mean(similarityCG_juv_random)
+sd(similarityCG_juv_random)
+
+
+## Males
+similarity_CG_males <- NA
+#dynamics_CG_ad <-list()
+
+elo_CG_jul_males <- CG_scores_jul[which(rownames(CG_scores_jul) %in% males),1:10000]
+elo_CG_sept_males <- CG_scores_sept[which(rownames(CG_scores_sept) %in% males),1:10000]
+
+
+
+for (i in 1:ncol(elo_CG_jul_males)) {
+  # DYNAMIC SIMILARITY
+  rank_CG_jul_ov <- as.data.frame(elo_CG_jul_males[,i])
+  rank_CG_jul_ov$id <- rownames(elo_CG_jul_males)
+  rank_CG_jul_ov$rank <- rank(-rank_CG_jul_ov[,1])
+  rank_CG_jul <- rank_CG_jul_ov %>% arrange(desc(-rank_CG_jul_ov$rank),decreasing=F)
+  
+  rank_CG_sept_ov <- as.data.frame(elo_CG_sept_males[,i])
+  rank_CG_sept_ov$id <- rownames(elo_CG_sept_males)
+  rank_CG_sept_ov$rank <- rank(-rank_CG_sept_ov[,1])
+  rank_CG_sept <- rank_CG_sept_ov %>% arrange(desc(-rank_CG_sept_ov$rank),decreasing=F)
+  
+  similarity_CG_males[i] <- dyadic_similarity(rank_CG_jul$id, rank_CG_sept$id)
+}
+
+
+similarityCG_males_random <- NA
+for (i in 1:10000) {
+  random_CG_jul<- sample(rank_CG_jul$id,size=nrow(rank_CG_jul),replace=F)
+  random_CG_sept <- sample(rank_CG_sept$id,size=nrow(rank_CG_sept),replace=F)
+  similarityCG_males_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
+}
+
+mean(similarity_CG_males)
+sd(similarity_CG_males)
+
+mean(similarityCG_males_random)
+sd(similarityCG_males_random)
+
+
+## females
+similarity_CG_females <- NA
+#dynamics_CG_ad <-list()
+
+elo_CG_jul_females <- CG_scores_jul[which(rownames(CG_scores_jul) %in% females),1:10000]
+elo_CG_sept_females <- CG_scores_sept[which(rownames(CG_scores_sept) %in% females),1:10000]
+
+
+
+for (i in 1:ncol(elo_CG_jul_females)) {
+  # DYNAMIC SIMILARITY
+  rank_CG_jul_ov <- as.data.frame(elo_CG_jul_females[,i])
+  rank_CG_jul_ov$id <- rownames(elo_CG_jul_females)
+  rank_CG_jul_ov$rank <- rank(-rank_CG_jul_ov[,1])
+  rank_CG_jul <- rank_CG_jul_ov %>% arrange(desc(-rank_CG_jul_ov$rank),decreasing=F)
+  
+  rank_CG_sept_ov <- as.data.frame(elo_CG_sept_females[,i])
+  rank_CG_sept_ov$id <- rownames(elo_CG_sept_females)
+  rank_CG_sept_ov$rank <- rank(-rank_CG_sept_ov[,1])
+  rank_CG_sept <- rank_CG_sept_ov %>% arrange(desc(-rank_CG_sept_ov$rank),decreasing=F)
+  
+  similarity_CG_females[i] <- dyadic_similarity(rank_CG_jul$id, rank_CG_sept$id)
+}
+
+
+similarityCG_females_random <- NA
+for (i in 1:10000) {
+  random_CG_jul<- sample(rank_CG_jul$id,size=nrow(rank_CG_jul),replace=F)
+  random_CG_sept <- sample(rank_CG_sept$id,size=nrow(rank_CG_sept),replace=F)
+  similarityCG_females_random[i] <- dyadic_similarity(random_CG_jul, random_CG_sept)
+}
+
+mean(similarity_CG_females)
+sd(similarity_CG_females)
+
+mean(similarityCG_females_random)
+sd(similarityCG_females_random)
+
+
+
+
 # BA
 BA_jul <- agg[which(agg$LOCATION=="BA" &
                       agg$DATE <20190720),]
@@ -261,6 +431,163 @@ for (i in 1:10000) {
 
 
 
+## ADULTS
+similarity_BA_ad <- NA
+#dynamics_BA_ad <-list()
+
+elo_BA_jul_adults <- BA_scores_jul[which(rownames(BA_scores_jul) %in% adults),1:10000]
+elo_BA_2022_adults <- BA_scores_sept[which(rownames(BA_scores_sept) %in% adults),1:10000]
+
+
+
+for (i in 1:ncol(elo_BA_jul_adults)) {
+  # DYNAMIC SIMILARITY
+  rank_BA_jul_ov <- as.data.frame(elo_BA_jul_adults[,i])
+  rank_BA_jul_ov$id <- rownames(elo_BA_jul_adults)
+  rank_BA_jul_ov$rank <- rank(-rank_BA_jul_ov[,1])
+  rank_BA_jul <- rank_BA_jul_ov %>% arrange(desc(-rank_BA_jul_ov$rank),decreasing=F)
+  
+  rank_BA_sept_ov <- as.data.frame(elo_BA_2022_adults[,i])
+  rank_BA_sept_ov$id <- rownames(elo_BA_2022_adults)
+  rank_BA_sept_ov$rank <- rank(-rank_BA_sept_ov[,1])
+  rank_BA_sept <- rank_BA_sept_ov %>% arrange(desc(-rank_BA_sept_ov$rank),decreasing=F)
+  
+  similarity_BA_ad[i] <- dyadic_similarity(rank_BA_jul$id, rank_BA_sept$id)
+}
+
+
+similarityBA_adults_random <- NA
+for (i in 1:10000) {
+  random_BA_jul<- sample(rank_BA_jul$id,size=nrow(rank_BA_jul),replace=F)
+  random_BA_sept <- sample(rank_BA_sept$id,size=nrow(rank_BA_sept),replace=F)
+  similarityBA_adults_random[i] <- dyadic_similarity(random_BA_jul, random_BA_sept)
+}
+
+mean(similarity_BA_ad)
+sd(similarity_BA_ad)
+
+mean(similarityBA_adults_random)
+sd(similarityBA_adults_random)
+
+## JUVENILES
+similarity_BA_juv <- NA
+#dynamics_BA_ad <-list()
+
+elo_BA_jul_juv <- BA_scores_jul[which(rownames(BA_scores_jul) %in% juveniles),1:10000]
+elo_BA_sept_juv <- BA_scores_sept[which(rownames(BA_scores_sept) %in% juveniles),1:10000]
+
+
+
+for (i in 1:ncol(elo_BA_jul_juv)) {
+  # DYNAMIC SIMILARITY
+  rank_BA_jul_ov <- as.data.frame(elo_BA_jul_juv[,i])
+  rank_BA_jul_ov$id <- rownames(elo_BA_jul_juv)
+  rank_BA_jul_ov$rank <- rank(-rank_BA_jul_ov[,1])
+  rank_BA_jul <- rank_BA_jul_ov %>% arrange(desc(-rank_BA_jul_ov$rank),decreasing=F)
+  
+  rank_BA_sept_ov <- as.data.frame(elo_BA_sept_juv[,i])
+  rank_BA_sept_ov$id <- rownames(elo_BA_sept_juv)
+  rank_BA_sept_ov$rank <- rank(-rank_BA_sept_ov[,1])
+  rank_BA_sept <- rank_BA_sept_ov %>% arrange(desc(-rank_BA_sept_ov$rank),decreasing=F)
+  
+  similarity_BA_juv[i] <- dyadic_similarity(rank_BA_jul$id, rank_BA_sept$id)
+}
+
+
+similarityBA_juv_random <- NA
+for (i in 1:10000) {
+  random_BA_jul<- sample(rank_BA_jul$id,size=nrow(rank_BA_jul),replace=F)
+  random_BA_sept <- sample(rank_BA_sept$id,size=nrow(rank_BA_sept),replace=F)
+  similarityBA_juv_random[i] <- dyadic_similarity(random_BA_jul, random_BA_sept)
+}
+
+mean(similarity_BA_juv)
+sd(similarity_BA_juv)
+
+mean(similarityBA_juv_random)
+sd(similarityBA_juv_random)
+
+
+## Males
+similarity_BA_males <- NA
+#dynamics_BA_ad <-list()
+
+elo_BA_jul_males <- BA_scores_jul[which(rownames(BA_scores_jul) %in% males),1:10000]
+elo_BA_sept_males <- BA_scores_sept[which(rownames(BA_scores_sept) %in% males),1:10000]
+
+
+
+for (i in 1:ncol(elo_BA_jul_males)) {
+  # DYNAMIC SIMILARITY
+  rank_BA_jul_ov <- as.data.frame(elo_BA_jul_males[,i])
+  rank_BA_jul_ov$id <- rownames(elo_BA_jul_males)
+  rank_BA_jul_ov$rank <- rank(-rank_BA_jul_ov[,1])
+  rank_BA_jul <- rank_BA_jul_ov %>% arrange(desc(-rank_BA_jul_ov$rank),decreasing=F)
+  
+  rank_BA_sept_ov <- as.data.frame(elo_BA_sept_males[,i])
+  rank_BA_sept_ov$id <- rownames(elo_BA_sept_males)
+  rank_BA_sept_ov$rank <- rank(-rank_BA_sept_ov[,1])
+  rank_BA_sept <- rank_BA_sept_ov %>% arrange(desc(-rank_BA_sept_ov$rank),decreasing=F)
+  
+  similarity_BA_males[i] <- dyadic_similarity(rank_BA_jul$id, rank_BA_sept$id)
+}
+
+
+similarityBA_males_random <- NA
+for (i in 1:10000) {
+  random_BA_jul<- sample(rank_BA_jul$id,size=nrow(rank_BA_jul),replace=F)
+  random_BA_sept <- sample(rank_BA_sept$id,size=nrow(rank_BA_sept),replace=F)
+  similarityBA_males_random[i] <- dyadic_similarity(random_BA_jul, random_BA_sept)
+}
+
+mean(similarity_BA_males)
+sd(similarity_BA_males)
+
+mean(similarityBA_males_random)
+sd(similarityBA_males_random)
+
+
+## females
+similarity_BA_females <- NA
+#dynamics_BA_ad <-list()
+
+elo_BA_jul_females <- BA_scores_jul[which(rownames(BA_scores_jul) %in% females),1:10000]
+elo_BA_sept_females <- BA_scores_sept[which(rownames(BA_scores_sept) %in% females),1:10000]
+
+
+
+for (i in 1:ncol(elo_BA_jul_females)) {
+  # DYNAMIC SIMILARITY
+  rank_BA_jul_ov <- as.data.frame(elo_BA_jul_females[,i])
+  rank_BA_jul_ov$id <- rownames(elo_BA_jul_females)
+  rank_BA_jul_ov$rank <- rank(-rank_BA_jul_ov[,1])
+  rank_BA_jul <- rank_BA_jul_ov %>% arrange(desc(-rank_BA_jul_ov$rank),decreasing=F)
+  
+  rank_BA_sept_ov <- as.data.frame(elo_BA_sept_females[,i])
+  rank_BA_sept_ov$id <- rownames(elo_BA_sept_females)
+  rank_BA_sept_ov$rank <- rank(-rank_BA_sept_ov[,1])
+  rank_BA_sept <- rank_BA_sept_ov %>% arrange(desc(-rank_BA_sept_ov$rank),decreasing=F)
+  
+  similarity_BA_females[i] <- dyadic_similarity(rank_BA_jul$id, rank_BA_sept$id)
+}
+
+
+similarityBA_females_random <- NA
+for (i in 1:10000) {
+  random_BA_jul<- sample(rank_BA_jul$id,size=nrow(rank_BA_jul),replace=F)
+  random_BA_sept <- sample(rank_BA_sept$id,size=nrow(rank_BA_sept),replace=F)
+  similarityBA_females_random[i] <- dyadic_similarity(random_BA_jul, random_BA_sept)
+}
+
+mean(similarity_BA_females)
+sd(similarity_BA_females)
+
+mean(similarityBA_females_random)
+sd(similarityBA_females_random)
+
+
+
+
 # NB
 NB_jul <- agg[which(agg$LOCATION=="NB" &
                       agg$DATE <20190720),]
@@ -367,6 +694,169 @@ for (i in 1:10000) {
   random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
   similarityNB_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
 }
+
+
+## ADULTS
+similarity_NB_ad <- NA
+#dynamics_NB_ad <-list()
+
+elo_NB_jul_adults <- NB_scores_jul[which(rownames(NB_scores_jul) %in% adults),1:10000]
+elo_NB_2022_adults <- NB_scores_sept[which(rownames(NB_scores_sept) %in% adults),1:10000]
+
+
+
+for (i in 1:ncol(elo_NB_jul_adults)) {
+  # DYNAMIC SIMILARITY
+  rank_NB_jul_ov <- as.data.frame(elo_NB_jul_adults[,i])
+  rank_NB_jul_ov$id <- rownames(elo_NB_jul_adults)
+  rank_NB_jul_ov$rank <- rank(-rank_NB_jul_ov[,1])
+  rank_NB_jul <- rank_NB_jul_ov %>% arrange(desc(-rank_NB_jul_ov$rank),decreasing=F)
+  
+  rank_NB_sept_ov <- as.data.frame(elo_NB_2022_adults[,i])
+  rank_NB_sept_ov$id <- rownames(elo_NB_2022_adults)
+  rank_NB_sept_ov$rank <- rank(-rank_NB_sept_ov[,1])
+  rank_NB_sept <- rank_NB_sept_ov %>% arrange(desc(-rank_NB_sept_ov$rank),decreasing=F)
+  
+  similarity_NB_ad[i] <- dyadic_similarity(rank_NB_jul$id, rank_NB_sept$id)
+}
+
+
+similarityNB_adults_random <- NA
+for (i in 1:10000) {
+  random_NB_jul<- sample(rank_NB_jul$id,size=nrow(rank_NB_jul),replace=F)
+  random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
+  similarityNB_adults_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
+}
+
+mean(similarity_NB_ad)
+sd(similarity_NB_ad)
+
+mean(similarityNB_adults_random)
+sd(similarityNB_adults_random)
+
+## JUVENILES
+similarity_NB_juv <- NA
+#dynamics_NB_ad <-list()
+
+elo_NB_jul_juv <- NB_scores_jul[which(rownames(NB_scores_jul) %in% juveniles),1:10000]
+elo_NB_sept_juv <- NB_scores_sept[which(rownames(NB_scores_sept) %in% juveniles),1:10000]
+
+
+
+for (i in 1:ncol(elo_NB_jul_juv)) {
+  # DYNAMIC SIMILARITY
+  rank_NB_jul_ov <- as.data.frame(elo_NB_jul_juv[,i])
+  rank_NB_jul_ov$id <- rownames(elo_NB_jul_juv)
+  rank_NB_jul_ov$rank <- rank(-rank_NB_jul_ov[,1])
+  rank_NB_jul <- rank_NB_jul_ov %>% arrange(desc(-rank_NB_jul_ov$rank),decreasing=F)
+  
+  rank_NB_sept_ov <- as.data.frame(elo_NB_sept_juv[,i])
+  rank_NB_sept_ov$id <- rownames(elo_NB_sept_juv)
+  rank_NB_sept_ov$rank <- rank(-rank_NB_sept_ov[,1])
+  rank_NB_sept <- rank_NB_sept_ov %>% arrange(desc(-rank_NB_sept_ov$rank),decreasing=F)
+  
+  similarity_NB_juv[i] <- dyadic_similarity(rank_NB_jul$id, rank_NB_sept$id)
+}
+
+
+similarityNB_juv_random <- NA
+for (i in 1:10000) {
+  random_NB_jul<- sample(rank_NB_jul$id,size=nrow(rank_NB_jul),replace=F)
+  random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
+  similarityNB_juv_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
+}
+
+mean(similarity_NB_juv)
+sd(similarity_NB_juv)
+
+mean(similarityNB_juv_random)
+sd(similarityNB_juv_random)
+
+
+## Males
+similarity_NB_males <- NA
+#dynamics_NB_ad <-list()
+
+elo_NB_jul_males <- NB_scores_jul[which(rownames(NB_scores_jul) %in% males),1:10000]
+elo_NB_sept_males <- NB_scores_sept[which(rownames(NB_scores_sept) %in% males),1:10000]
+
+
+
+for (i in 1:ncol(elo_NB_jul_males)) {
+  # DYNAMIC SIMILARITY
+  rank_NB_jul_ov <- as.data.frame(elo_NB_jul_males[,i])
+  rank_NB_jul_ov$id <- rownames(elo_NB_jul_males)
+  rank_NB_jul_ov$rank <- rank(-rank_NB_jul_ov[,1])
+  rank_NB_jul <- rank_NB_jul_ov %>% arrange(desc(-rank_NB_jul_ov$rank),decreasing=F)
+  
+  rank_NB_sept_ov <- as.data.frame(elo_NB_sept_males[,i])
+  rank_NB_sept_ov$id <- rownames(elo_NB_sept_males)
+  rank_NB_sept_ov$rank <- rank(-rank_NB_sept_ov[,1])
+  rank_NB_sept <- rank_NB_sept_ov %>% arrange(desc(-rank_NB_sept_ov$rank),decreasing=F)
+  
+  similarity_NB_males[i] <- dyadic_similarity(rank_NB_jul$id, rank_NB_sept$id)
+}
+
+
+similarityNB_males_random <- NA
+for (i in 1:10000) {
+  random_NB_jul<- sample(rank_NB_jul$id,size=nrow(rank_NB_jul),replace=F)
+  random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
+  similarityNB_males_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
+}
+
+mean(similarity_NB_males)
+sd(similarity_NB_males)
+
+mean(similarityNB_males_random)
+sd(similarityNB_males_random)
+
+
+## females
+similarity_NB_females <- NA
+#dynamics_NB_ad <-list()
+
+elo_NB_jul_females <- NB_scores_jul[which(rownames(NB_scores_jul) %in% females),1:10000]
+elo_NB_sept_females <- NB_scores_sept[which(rownames(NB_scores_sept) %in% females),1:10000]
+
+
+
+for (i in 1:ncol(elo_NB_jul_females)) {
+  # DYNAMIC SIMILARITY
+  rank_NB_jul_ov <- as.data.frame(elo_NB_jul_females[,i])
+  rank_NB_jul_ov$id <- rownames(elo_NB_jul_females)
+  rank_NB_jul_ov$rank <- rank(-rank_NB_jul_ov[,1])
+  rank_NB_jul <- rank_NB_jul_ov %>% arrange(desc(-rank_NB_jul_ov$rank),decreasing=F)
+  
+  rank_NB_sept_ov <- as.data.frame(elo_NB_sept_females[,i])
+  rank_NB_sept_ov$id <- rownames(elo_NB_sept_females)
+  rank_NB_sept_ov$rank <- rank(-rank_NB_sept_ov[,1])
+  rank_NB_sept <- rank_NB_sept_ov %>% arrange(desc(-rank_NB_sept_ov$rank),decreasing=F)
+  
+  similarity_NB_females[i] <- dyadic_similarity(rank_NB_jul$id, rank_NB_sept$id)
+}
+
+
+similarityNB_females_random <- NA
+for (i in 1:10000) {
+  random_NB_jul<- sample(rank_NB_jul$id,size=nrow(rank_NB_jul),replace=F)
+  random_NB_sept <- sample(rank_NB_sept$id,size=nrow(rank_NB_sept),replace=F)
+  similarityNB_females_random[i] <- dyadic_similarity(random_NB_jul, random_NB_sept)
+}
+
+mean(similarity_NB_females)
+sd(similarity_NB_females)
+
+mean(similarityNB_females_random)
+sd(similarityNB_females_random)
+
+
+
+
+
+
+
+
 
 
 ranks_complete <- rbind(CG_rank_jul,

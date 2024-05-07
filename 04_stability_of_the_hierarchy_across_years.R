@@ -11,6 +11,7 @@ library(lme4)
 library(tidyverse)
 library(ggbump)
 library(rptR)
+library(DynaRankR)
 
 # LOAD DATA
 agg_2019 <- read.csv('soc_data_2019.csv',stringsAsFactors = F)
@@ -40,6 +41,7 @@ match_id$ID_2022 <- str_replace_all(match_id$ID_2022, ".1", "")
 
 ids <- as.data.frame(match_id$ID_2022)
 
+# correcting typos
 match_id$ID_2022[match_id$ID_2022=="BPN_H_CG"] <- "BPN_V_CG"
 match_id$ID_2022[match_id$ID_2022=="PMmiddle_CG"] <- "PM_H_CG"
 match_id$ID_2022[match_id$ID_2022=="BNwing_CG"] <- "BNw_CG"
@@ -71,11 +73,9 @@ ids$ID_2022 <- str_replace_all(ids$ID_2022, "_2022", "")
 ids$ID_2022[ids$ID_2019=="X133"]<- "TNP_H_CG"
 
 #subset aggressive data to include only individuals included in both years
-agg_2019_sub <- agg_2019[which(agg_2019$WINNER%in%ids$ID_2019 &
-                               agg_2019$LOSER%in%ids$ID_2019),]
+agg_2019_sub <- agg_2019#[which(agg_2019$WINNER%in%ids$ID_2019 & agg_2019$LOSER%in%ids$ID_2019),]
 
-agg_2022_sub <- agg_2022[which(agg_2022$Winner %in%ids$ID_2022 &
-                               agg_2022$Loser %in%ids$ID_2022),]
+agg_2022_sub <- agg_2022#[which(agg_2022$Winner %in%ids$ID_2022 & agg_2022$Loser %in%ids$ID_2022),]
 
 
 # subsetting to CG
@@ -97,18 +97,15 @@ inds_CG_2022_sub <- inds_CG_2022_summary[which(inds_CG_2022_summary$Freq>=5),]
 inds_CG_2022_sub$ID2019 <- ids$ID_2019[match(inds_CG_2022_sub$inds_CG_2022,
                                              ids$ID_2022)]
 
-agg_both <- as.data.frame(Reduce(intersect, list(inds_CG_2019_sub$inds_CG_2019,
-                                                 inds_CG_2022_sub$ID2019 )))
+agg_both <- as.data.frame(Reduce(intersect, list(inds_CG_2019_sub$inds_CG_2019,inds_CG_2022_sub$ID2019 )))
 colnames(agg_both) <- "ID_2019"
-agg_both$ID_2022 <- ids$ID_2022[match(agg_both$ID_2019,
-                                      ids$ID_2019)]
+agg_both$ID_2022 <- ids$ID_2022[match(agg_both$ID_2019,ids$ID_2019)]
 
 #####  calculating rank 2019
-agg_CG_2019_sub <- agg_CG_2019[which(agg_CG_2019$WINNER%in%agg_both$ID_2019 & 
-                                     agg_CG_2019$LOSER%in%agg_both$ID_2019),]
+#agg_CG_2019_sub <- agg_CG_2019[which(agg_CG_2019$WINNER%in%agg_both$ID_2019 & agg_CG_2019$LOSER%in%agg_both$ID_2019),]
 
-elo_CG_2019 <- elo_scores(winners=agg_CG_2019_sub$WINNER, 
-                          losers=agg_CG_2019_sub$LOSER, 
+elo_CG_2019 <- elo_scores(winners=agg_CG_2019$WINNER, 
+                          losers=agg_CG_2019$LOSER, 
                           identities = NULL, 
                           sigmoid.param = 1/300, 
                           K = 200, 
@@ -120,19 +117,34 @@ elo_CG_2019 <- elo_scores(winners=agg_CG_2019_sub$WINNER,
                           dates = NULL)
 mean_2019 <- rowMeans(as.matrix(elo_CG_2019))
 names(mean_2019) <- rownames(elo_CG_2019)
-# ranks_CG_2019 <-rank(-mean_2019)
-
+ranks_CG_2019 <-rank(-mean_2019)
+ranks_CG_2019 <- as.data.frame(ranks_CG_2019)
 ### 2022
 #####  calculating rank 2022
-agg_CG_2022_sub <- agg_CG_2022[which(agg_CG_2022$Winner %in% agg_both$ID_2022 & 
-                                     agg_CG_2022$Loser %in% agg_both$ID_2022),]
+agg_CG_2022_sub <- agg_CG_2022#[which(agg_CG_2022$Winner %in% agg_both$ID_2022 & 
+#                                      agg_CG_2022$Loser %in% agg_both$ID_2022),]
+# agg_CG_2022_sub$Winner_ID2019 <- agg_both$ID_2019[match(agg_CG_2022_sub$Winner,
+#                                                         agg_both$ID_2022)]
+# agg_CG_2022_sub$Loser_ID2019 <- agg_both$ID_2019[match(agg_CG_2022_sub$Loser,
+#                                                         agg_both$ID_2022)]
 
+# elo_CG_2022 <- elo_scores(winners=agg_CG_2022_sub$Winner_ID2019, 
+#                           losers=agg_CG_2022_sub$Loser_ID2019, 
+#                           identities = NULL, 
+#                           sigmoid.param = 1/300, 
+#                           K = 200, 
+#                           #init.score = mean_2019, 
+#                           randomise = TRUE, 
+#                           n.rands = 10000, 
+#                           return.as.ranks = FALSE, 
+#                           return.trajectories = FALSE, 
+#                           dates = NULL)
 elo_CG_2022 <- elo_scores(winners=agg_CG_2022_sub$Winner, 
                           losers=agg_CG_2022_sub$Loser, 
                           identities = NULL, 
                           sigmoid.param = 1/300, 
                           K = 200, 
-                          init.score = mean_2019, 
+                          #init.score = mean_2019, 
                           randomise = TRUE, 
                           n.rands = 10000, 
                           return.as.ranks = FALSE, 
@@ -144,6 +156,19 @@ ranks_CG_2022 <-rank(-mean_2022)
 ranks_CG_2022<-as.data.frame(ranks_CG_2022)
 
 
+
+#subsetting to individuals present in both years
+ranks_CG_2019$ID <- rownames(ranks_CG_2019)
+CG_2019_sub <- as.data.frame(ranks_CG_2019[which(rownames(ranks_CG_2019) %in% agg_both$ID_2019),])
+colnames(CG_2019_sub)[1] <- "rank"
+
+ranks_CG_2022$ID <- rownames(ranks_CG_2022)
+CG_2022_sub <- as.data.frame(ranks_CG_2022[which(rownames(ranks_CG_2022) %in% agg_both$ID_2022),])
+colnames(CG_2022_sub)[1] <- "rank"
+
+CG_2019_sub$rerank <- rank(CG_2019_sub$rank)
+CG_2022_sub$rerank <- rank(CG_2022_sub$rank)
+
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="5"] <-"X5"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="11"] <-"X11"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="31"] <-"X31"
@@ -154,59 +179,88 @@ sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="31"] <-"X31"
 sexing_eye_2019$ID_Site[sexing_eye_2019$ID_Site=="78"] <-"X78"
 
 
-ranks_CG_2019$Year <- "2019"
-ranks_CG_2019$ID <- rownames(ranks_CG_2019)
-ranks_CG_2019$Sex <- sexing_gen_2019$Sex[match(ranks_CG_2019$ID,
+CG_2019_sub$Year <- "2019"
+CG_2019_sub$ID <- rownames(CG_2019_sub)
+CG_2019_sub$Sex <- sexing_gen_2019$Sex[match(CG_2019_sub$ID,
                                                sexing_gen_2019$Social_ID)]
-ranks_CG_2019$Sex[is.na(ranks_CG_2019$Sex)] <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2019$ID[is.na(ranks_CG_2019$Sex)],
-                                                                                  sexing_eye_2019$ID_Site )]
-ranks_CG_2019$Age <- sexing_gen_2019$Age[match(ranks_CG_2019$ID,
+CG_2019_sub$Sex[is.na(CG_2019_sub$Sex)] <- sexing_eye_2019$Assigned_Sex[match(CG_2019_sub$ID[is.na(CG_2019_sub$Sex)],
+                                                                               sexing_eye_2019$ID_Site )]
+CG_2019_sub$Age <- sexing_gen_2019$Age[match(CG_2019_sub$ID,
                                                sexing_gen_2019$Social_ID)]
-ranks_CG_2019$Age[is.na(ranks_CG_2019$Age)] <- sexing_eye_2019$Assigned_Age[match(ranks_CG_2019$ID[is.na(ranks_CG_2019$Age)],
+CG_2019_sub$Age[is.na(CG_2019_sub$Age)] <- sexing_eye_2019$Assigned_Age[match(CG_2019_sub$ID[is.na(CG_2019_sub$Age)],
                                                                                   sexing_eye_2019$ID_Site )]
-colnames(ranks_CG_2019)[1] <- "Rank"
-ranks_CG_2019$Sex[ranks_CG_2019$ID=="BGN_V_BA"]<-"M"
-ranks_CG_2019$Age[ranks_CG_2019$ID=="BGN_V_BA"]<-"A"
+colnames(CG_2019_sub)[1] <- "Rank"
+CG_2019_sub$Sex[CG_2019_sub$ID=="BGN_V_BA"]<-"M"
+CG_2019_sub$Age[CG_2019_sub$ID=="BGN_V_BA"]<-"A"
 
-ranks_CG_2019$Sex[ranks_CG_2019$ID=="X31"]<-"F"
-ranks_CG_2019$Age[ranks_CG_2019$ID=="X31"]<-"A"
+CG_2019_sub$Sex[CG_2019_sub$ID=="X31"]<-"F"
+CG_2019_sub$Age[CG_2019_sub$ID=="X31"]<-"A"
 
-ranks_CG_2019$Sex[ranks_CG_2019$ID=="VPT_V_CG"]<-"M"
-ranks_CG_2019$Age[ranks_CG_2019$ID=="VPT_V_CG"]<-"A"
+CG_2019_sub$Sex[CG_2019_sub$ID=="VPT_V_CG"]<-"M"
+CG_2019_sub$Age[CG_2019_sub$ID=="VPT_V_CG"]<-"A"
 
-ranks_CG_2019$Sex[ranks_CG_2019$ID=="VBP_V_CG"]<-"M"
-ranks_CG_2019$Age[ranks_CG_2019$ID=="VBP_V_CG"]<-"A"
+CG_2019_sub$Sex[CG_2019_sub$ID=="VBP_V_CG"]<-"M"
+CG_2019_sub$Age[CG_2019_sub$ID=="VBP_V_CG"]<-"A"
 
-ranks_CG_2022$Year <- "2022"
-ranks_CG_2022$ID <- ids$ID_2019[match(rownames(ranks_CG_2022),ids$ID_2022)]
-ranks_CG_2022$ID <- ids$ID_2019[match(rownames(ranks_CG_2022),ids$ID_2022)]
+CG_2019_sub$Sex[CG_2019_sub$ID=="X2"]<-"M"
+CG_2019_sub$Age[CG_2019_sub$ID=="X2"]<-"A"
+
+CG_2019_sub$Sex[CG_2019_sub$ID=="X39"]<-"M"
+CG_2019_sub$Age[CG_2019_sub$ID=="X39"]<-"A"
+
+CG_2022_sub$Year <- "2022"
+CG_2022_sub$ID <- agg_both$ID_2019[match(rownames(CG_2022_sub),
+                                         agg_both$ID_2022)]
 
 
-ranks_CG_2022$Sex <- sexing_gen_2019$Sex[match(ranks_CG_2022$ID,
+CG_2022_sub$Sex <- sexing_gen_2019$Sex[match(CG_2022_sub$ID,
                                                sexing_gen_2019$Social_ID)]
-ranks_CG_2022$Sex[is.na(ranks_CG_2022$Sex)] <- sexing_eye_2019$Assigned_Sex[match(ranks_CG_2022$ID[is.na(ranks_CG_2022$Sex)],
+CG_2022_sub$Sex[is.na(CG_2022_sub$Sex)] <- sexing_eye_2019$Assigned_Sex[match(CG_2022_sub$ID[is.na(CG_2022_sub$Sex)],
                                                                                   sexing_eye_2019$ID_Site )]
 
-ranks_CG_2022$Age <- sexing_gen_2019$Age[match(ranks_CG_2022$ID,
+CG_2022_sub$Age <- sexing_gen_2019$Age[match(CG_2022_sub$ID,
                                                sexing_gen_2019$Social_ID)]
-ranks_CG_2022$Age[is.na(ranks_CG_2022$Age)] <- sexing_eye_2019$Assigned_Age[match(ranks_CG_2022$ID[is.na(ranks_CG_2022$Age)],
+CG_2022_sub$Age[is.na(CG_2022_sub$Age)] <- sexing_eye_2019$Assigned_Age[match(CG_2022_sub$ID[is.na(CG_2022_sub$Age)],
                                                                                   sexing_eye_2019$ID_Site )]
+colnames(CG_2022_sub)[1] <- "Rank"
 
+CG_2022_sub$Sex[CG_2022_sub$ID=="BGN_V_BA"]<-"M"
+CG_2022_sub$Age[CG_2022_sub$ID=="BGN_V_BA"]<-"A"
+
+CG_2022_sub$Sex[CG_2022_sub$ID=="X31"]<-"F"
+CG_2022_sub$Age[CG_2022_sub$ID=="X31"]<-"A"
+
+CG_2022_sub$Sex[CG_2022_sub$ID=="VPT_V_CG"]<-"M"
+CG_2022_sub$Age[CG_2022_sub$ID=="VPT_V_CG"]<-"A"
+
+CG_2022_sub$Sex[CG_2022_sub$ID=="VBP_V_CG"]<-"M"
+CG_2022_sub$Age[CG_2022_sub$ID=="VBP_V_CG"]<-"A"
+
+CG_2022_sub$Sex[CG_2022_sub$ID=="X2"]<-"M"
+CG_2022_sub$Age[CG_2022_sub$ID=="X2"]<-"A"
+
+CG_2022_sub$Sex[CG_2022_sub$ID=="X39"]<-"M"
+CG_2022_sub$Age[CG_2022_sub$ID=="X39"]<-"A"
 
 
 similarity_years <- NA
 
+elo_CG_2019_sub <- elo_CG_2019[which(rownames(elo_CG_2019) %in% agg_both$ID_2019),]
+elo_CG_2022_sub <- elo_CG_2022[which(rownames(elo_CG_2022) %in% agg_both$ID_2022),]
+
+x <- agg_both$ID_2019[match(rownames(elo_CG_2022_sub),agg_both$ID_2022)]
+rownames(elo_CG_2022_sub) <- x
+
 for (i in 1:ncol(elo_CG_2019)) {
-  rank_CG_2019_ov <- as.data.frame(elo_CG_2019[,i])
-  rank_CG_2019_ov$id <- rownames(elo_CG_2019)
+  rank_CG_2019_ov <- as.data.frame(elo_CG_2019_sub[,i])
+  rank_CG_2019_ov$id <- rownames(elo_CG_2019_sub)
   rank_CG_2019_ov$rank <- rank(-rank_CG_2019_ov[,1])
   rank_CG_2019 <- rank_CG_2019_ov %>% arrange(desc(-rank_CG_2019_ov$rank),decreasing=F)
   
-  rank_CG_2022_ov <- as.data.frame(elo_CG_2022[,i])
-  rank_CG_2022_ov$ID2022 <- rownames(elo_CG_2022)
+  rank_CG_2022_ov <- as.data.frame(elo_CG_2022_sub[,i])
+  rank_CG_2022_ov$id <- rownames(elo_CG_2022_sub)
   rank_CG_2022_ov$rank <- rank(-rank_CG_2022_ov[,1])
   rank_CG_2022 <- rank_CG_2022_ov %>% arrange(desc(-rank_CG_2022_ov$rank),decreasing=F)
-  rank_CG_2022$id <- ids$ID_2019[match(rank_CG_2022$ID2022,ids$ID_2022)]
 
   
   similarity_years[i] <- dyadic_similarity(rank_CG_2019$id, rank_CG_2022$id)
@@ -220,53 +274,97 @@ for (i in 1:10000) {
       similarity_random[i] <- dyadic_similarity(random_2019, random_2022)
 }
 
+mean(similarity_years)
+sd(similarity_years)
+
+mean(similarity_random)
+sd(similarity_random)
 
 
-ranks_CG_2022$Sex[ranks_CG_2022$ID=="BGN_V_BA"]<-"M"
-ranks_CG_2022$Age[ranks_CG_2022$ID=="BGN_V_BA"]<-"A"
+# subsetting to adult males 
+CG_2019_males <- CG_2019_sub[which(CG_2019_sub$Age=="A" &
+                                     CG_2019_sub$Sex=="M"),]
+CG_2022_males <- CG_2022_sub[which(CG_2022_sub$Age=="A" &
+                                     CG_2022_sub$Sex=="M"),]
+similarity_years_males <- NA
 
-ranks_CG_2022$Sex[ranks_CG_2022$ID=="X31"]<-"F"
-ranks_CG_2022$Age[ranks_CG_2022$ID=="X31"]<-"A"
+elo_CG_2019_males <- elo_CG_2019[which(rownames(elo_CG_2019) %in% CG_2019_males$ID),]
+elo_CG_2022_males <- elo_CG_2022[which(rownames(elo_CG_2022) %in% rownames(CG_2022_males)),]
 
-ranks_CG_2022$Sex[ranks_CG_2022$ID=="VPT_V_CG"]<-"M"
-ranks_CG_2022$Age[ranks_CG_2022$ID=="VPT_V_CG"]<-"A"
+x <- agg_both$ID_2019[match(rownames(elo_CG_2022_males),agg_both$ID_2022)]
+rownames(elo_CG_2022_males) <- x
 
-ranks_CG_2022$Sex[ranks_CG_2022$ID=="VBP_V_CG"]<-"M"
-ranks_CG_2022$Age[ranks_CG_2022$ID=="VBP_V_CG"]<-"A"
+for (i in 1:ncol(elo_CG_2019_males)) {
+  rank_CG_2019_ov <- as.data.frame(elo_CG_2019_males[,i])
+  rank_CG_2019_ov$id <- rownames(elo_CG_2019_males)
+  rank_CG_2019_ov$rank <- rank(-rank_CG_2019_ov[,1])
+  rank_CG_2019 <- rank_CG_2019_ov %>% arrange(desc(-rank_CG_2019_ov$rank),decreasing=F)
+  
+  rank_CG_2022_ov <- as.data.frame(elo_CG_2022_males[,i])
+  rank_CG_2022_ov$id <- rownames(elo_CG_2022_males)
+  rank_CG_2022_ov$rank <- rank(-rank_CG_2022_ov[,1])
+  rank_CG_2022 <- rank_CG_2022_ov %>% arrange(desc(-rank_CG_2022_ov$rank),decreasing=F)
+  
+  
+  similarity_years_males[i] <- dyadic_similarity(rank_CG_2019$id, rank_CG_2022$id)
+  
+}
 
-colnames(ranks_CG_2022)[1] <- "Rank"
+similarity_random_males <- NA
+for (i in 1:10000) {
+  random_2019<- sample(rank_CG_2019$id,size=nrow(rank_CG_2019),replace=F)
+  random_2022 <- sample(rank_CG_2022$id,size=nrow(rank_CG_2022),replace=F)
+  similarity_random_males[i] <- dyadic_similarity(random_2019, random_2022)
+}
 
-ranks_CG_2022_sub <- ranks_CG_2022[,which(colnames(ranks_CG_2022)%in%colnames(ranks_CG_2019))]
-DominanceScore<-rbind(ranks_CG_2019,ranks_CG_2022_sub)
+mean(similarity_years_males)
+sd(similarity_years_males)
 
-Rpt_model <- rptGaussian(Rank ~ Year + Sex + (1|ID), 
-                         grname=c("ID"), 
-                         data = DominanceScore, 
-                         nboot=1000, 
-                         npermut=0,
-                         adjusted = TRUE)
-print(Rpt_model)
-summary(Rpt_model)
-summary(Rpt_model$mod)
+mean(similarity_random_males)
+sd(similarity_random_males)
 
-DominanceScore_M <- DominanceScore[which(DominanceScore$Sex=="M"),]
-Rpt_model_m <- rptGaussian(Rank ~ Year + (1|ID), 
-                         grname=c("ID"), 
-                         data = DominanceScore_M, 
-                         nboot=1000, 
-                         npermut=0,
-                         adjusted = TRUE)
-print(Rpt_model_m)
-summary(Rpt_model_m)
-summary(Rpt_model_m$mod)
 
-DominanceScore_F <- DominanceScore[which(DominanceScore$Sex=="F"),]
-Rpt_model_f <- rptGaussian(Rank ~ Year + (1|ID), 
-                           grname=c("ID"), 
-                           data = DominanceScore_F, 
-                           nboot=1000, 
-                           npermut=0,
-                           adjusted = TRUE)
-print(Rpt_model_f)
-summary(Rpt_model_f)
-summary(Rpt_model_f$mod)
+
+# subsetting to adult females 
+CG_2019_females <- CG_2019_sub[which(CG_2019_sub$Age=="A" &
+                                     CG_2019_sub$Sex=="F"),]
+CG_2022_females <- CG_2022_sub[which(CG_2022_sub$Age=="A" &
+                                     CG_2022_sub$Sex=="F"),]
+similarity_years_females <- NA
+
+elo_CG_2019_females <- elo_CG_2019[which(rownames(elo_CG_2019) %in% CG_2019_females$ID),]
+elo_CG_2022_females <- elo_CG_2022[which(rownames(elo_CG_2022) %in% rownames(CG_2022_females)),]
+
+x <- agg_both$ID_2019[match(rownames(elo_CG_2022_females),agg_both$ID_2022)]
+rownames(elo_CG_2022_females) <- x
+
+for (i in 1:ncol(elo_CG_2019_females)) {
+  rank_CG_2019_ov <- as.data.frame(elo_CG_2019_females[,i])
+  rank_CG_2019_ov$id <- rownames(elo_CG_2019_females)
+  rank_CG_2019_ov$rank <- rank(-rank_CG_2019_ov[,1])
+  rank_CG_2019 <- rank_CG_2019_ov %>% arrange(desc(-rank_CG_2019_ov$rank),decreasing=F)
+  
+  rank_CG_2022_ov <- as.data.frame(elo_CG_2022_females[,i])
+  rank_CG_2022_ov$id <- rownames(elo_CG_2022_females)
+  rank_CG_2022_ov$rank <- rank(-rank_CG_2022_ov[,1])
+  rank_CG_2022 <- rank_CG_2022_ov %>% arrange(desc(-rank_CG_2022_ov$rank),decreasing=F)
+  
+  
+  similarity_years_females[i] <- dyadic_similarity(rank_CG_2019$id, rank_CG_2022$id)
+  
+}
+
+similarity_random_females <- NA
+for (i in 1:10000) {
+  random_2019<- sample(rank_CG_2019$id,size=nrow(rank_CG_2019),replace=F)
+  random_2022 <- sample(rank_CG_2022$id,size=nrow(rank_CG_2022),replace=F)
+  similarity_random_females[i] <- dyadic_similarity(random_2019, random_2022)
+}
+
+mean(similarity_years_females)
+sd(similarity_years_females)
+
+mean(similarity_random_females)
+sd(similarity_random_females)
+
+

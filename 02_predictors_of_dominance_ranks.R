@@ -80,10 +80,11 @@ scores.CG <- as.data.frame(scores.CG)
 ######## calculate ranks
 for (i in 1:nrow(scores.CG)) { 
   scores.CG$Med.rank [i] <- rowMeans(scores.CG)[i]
+  scores.CG$SD [i] <- sd(scores.CG[i,1:10000])
 }
 
-rank.CG <- as.data.frame(scores.CG$Med.rank)
-rank.CG$rank <- rank(rank.CG, na.last = TRUE)
+rank.CG <- as.data.frame(scores.CG[,10001:10002])
+rank.CG$rank <- rank(rank.CG$Med.rank, na.last = TRUE)
 rank.CG$ID <- rownames(scores.CG)
 
 rank.CG$st_rank <-rank.CG$rank/max(rank.CG$rank)
@@ -145,10 +146,13 @@ scores.CG.2022 <- as.data.frame(scores.CG.2022)
 ######## calculate ranks
 for (i in 1:nrow(scores.CG.2022)) { 
   scores.CG.2022$Med.rank [i] <- rowMeans(scores.CG.2022)[i]
+  scores.CG.2022$SD [i] <- sd(scores.CG.2022[i,1:10000])
+  
 }
 
-rank.CG.2022 <- as.data.frame(scores.CG.2022$Med.rank)
-rank.CG.2022$rank <- rank(rank.CG.2022, na.last = TRUE)
+rank.CG.2022 <- as.data.frame(scores.CG.2022[,10001:10002])
+rank.CG.2022$rank <- rank(rank.CG.2022$Med.rank, na.last = TRUE)
+
 rank.CG.2022$ID <- rownames(scores.CG.2022)
 rank.CG.2022$st_rank <-rank.CG.2022$rank/max(rank.CG.2022$rank)
 
@@ -210,10 +214,12 @@ scores.BA <- as.data.frame(scores.BA)
 ######## calculate ranks
 for (i in 1:nrow(scores.BA)) { 
   scores.BA$Med.rank [i] <- rowMeans(scores.BA)[i]
+  scores.BA$SD [i] <- sd(scores.BA[i,1:10000])
+  
 }
 
-rank.BA <- as.data.frame(scores.BA$Med.rank)
-rank.BA$rank <- rank(rank.BA, na.last = TRUE)
+rank.BA <- as.data.frame(scores.BA[,10001:10002])
+rank.BA$rank <- rank(rank.BA$Med.rank, na.last = TRUE)
 rank.BA$ID <- rownames(scores.BA)
 
 rank.BA$st_rank <-rank.BA$rank/max(rank.BA$rank)
@@ -273,16 +279,18 @@ scores.NB <- as.data.frame(scores.NB)
 ######## calculate ranks
 for (i in 1:nrow(scores.NB)) { 
   scores.NB$Med.rank [i] <- rowMeans(scores.NB)[i]
+  scores.NB$SD [i] <- sd(scores.NB[i,1:10000])
+  
 }
 
-rank.NB <- as.data.frame(scores.NB$Med.rank)
-rank.NB$rank <- rank(rank.NB, na.last = TRUE)
+rank.NB <- as.data.frame(scores.NB[,10001:10002])
+rank.NB$rank <- rank(rank.NB$Med.rank, na.last = TRUE)
 rank.NB$ID <- rownames(scores.NB)
 
 rank.NB$st_rank <-rank.NB$rank/max(rank.NB$rank)
 rank.NB$group <-"NB"
 
-rank <- rbind(rank.BA[,2:5],rank.CG[,2:5],rank.NB[,2:5])
+rank <- rbind(rank.BA[,2:6],rank.CG[,2:6],rank.NB[,2:6])
 
 rank$roost <- roost$ROOST[match(rank$ID,roost$ID)]
 
@@ -298,7 +306,7 @@ rank$sex <- vector$Sex[match(rank$ID,vector$Social_ID)]
 rank$sex[is.na(rank$sex)] <- marking$Assigned_Sex[match(rank$ID[is.na(rank$sex)], marking$ID_Site)]
 
 
-#write.csv(rank,"ranks_2019_all_groups.csv")
+write.csv(rank,"ranks_2019_all_groups.csv")
 
 
 roost_2022$roost[roost_2022$roost=="CG"] <- "CG 2022"
@@ -322,7 +330,7 @@ exclude <- unique(c(exclude1,exclude2,exclude3))
 rank_sub <- rank_tot[which(rank_tot$ID %ni% exclude),]
 
 
-predict.rank <- lmer(st_rank ~ age+at.roost+
+predict.rank <- lmer(st_rank ~ age+#at.roost+
                                sex+
                               (1|group),
                      data=rank_sub,
@@ -331,21 +339,6 @@ summary(predict.rank)
 
 texreg(predict.rank)
 
-rank$age[rank$age==""] <- NA
-
-predict.rank.2019 <- lmer(st_rank ~ age+at.roost +
-                       sex+
-                       (1|group),
-                     data=rank,
-                     na.action="na.omit")
-summary(predict.rank.2019)
-afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
-eval(parse(text=getURL(afurl)))
-aa <- allFit(predict.rank)
-
-is.OK <- sapply(aa,is,"merMod")  
-aa.OK <- aa[is.OK]
-lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
 
 
 ## MALES ONLY
@@ -627,22 +620,22 @@ rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)]
 rank_sub_m <- rank[which(rank$ID %ni% exclude),]
 
 
-predict.rank.m.2019 <- lmer(st_rank ~ age+#
-                       #        at.roost +
-                       # 
-                        (1|group),
-                     data=rank_sub_m,
-                     na.action="na.omit",
-                     control=lmerControl(optimizer="bobyqa",
-                                        optCtrl=list(maxfun=2e5)),)
-summary(predict.rank.m.2019)
-afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
-eval(parse(text=getURL(afurl)))
-aa <- allFit(predict.rank)
-
-is.OK <- sapply(aa,is,"merMod")  
-aa.OK <- aa[is.OK]
-lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+# predict.rank.m.2019 <- lmer(st_rank ~ age+#
+#                        #        at.roost +
+#                        # 
+#                         (1|group),
+#                      data=rank_sub_m,
+#                      na.action="na.omit",
+#                      control=lmerControl(optimizer="bobyqa",
+#                                         optCtrl=list(maxfun=2e5)),)
+# summary(predict.rank.m.2019)
+# afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+# eval(parse(text=getURL(afurl)))
+# aa <- allFit(predict.rank)
+# 
+# is.OK <- sapply(aa,is,"merMod")  
+# aa.OK <- aa[is.OK]
+# lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
 
 rank.CG.m.2022$roost <- roost_2022$roost[match(rank.CG.m.2022$ID,roost_2022$ID)]
 rank.CG.m.2022$group <-"CG 2022"
@@ -653,23 +646,25 @@ rank.CG.m.2022$age <- sexing_2022$assigned_age[match(rank.CG.m.2022$ID,sexing_20
 
 rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
 
-predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
-                              #(1|ID) +
-                              (1|group),
-                         ,data=rank_sub_m,
-                            na.action="na.omit",
-                            control=lmerControl(optimizer="bobyqa",
-                                                optCtrl=list(maxfun=2e5)),)
-summary(predict.rank.m.tot)
-afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
-eval(parse(text=getURL(afurl)))
-aa <- allFit(predict.rank.m.tot)
+rank_tot_m$roost[rank_tot_m$ID==""]
 
-is.OK <- sapply(aa,is,"merMod")  
-aa.OK <- aa[is.OK]
-lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
-
-
+# predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
+#                               #(1|ID) +
+#                               (1|group),
+#                          data=rank_sub_m,
+#                             na.action="na.omit",
+#                             control=lmerControl(optimizer="bobyqa",
+#                                                 optCtrl=list(maxfun=2e5)),)
+# summary(predict.rank.m.tot)
+# afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+# eval(parse(text=getURL(afurl)))
+# aa <- allFit(predict.rank.m.tot)
+# 
+# is.OK <- sapply(aa,is,"merMod")  
+# aa.OK <- aa[is.OK]
+# lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+# 
+# 
 
 
 
@@ -755,22 +750,22 @@ rank$age[is.na(rank$age)] <- marking$Assigned_Age[match(rank$ID[is.na(rank$age)]
 rank_sub_m <- rank[which(rank$ID %ni% exclude),]
 
 
-predict.rank.m.2019 <- lmer(st_rank ~ age+#
-                       #        at.roost +
-                       # 
-                        (1|group),
-                     data=rank_sub_m,
-                     na.action="na.omit",
-                     control=lmerControl(optimizer="bobyqa",
-                                        optCtrl=list(maxfun=2e5)),)
-summary(predict.rank.m.2019)
-afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
-eval(parse(text=getURL(afurl)))
-aa <- allFit(predict.rank)
-
-is.OK <- sapply(aa,is,"merMod")  
-aa.OK <- aa[is.OK]
-lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
+# predict.rank.m.2019 <- lmer(st_rank ~ age+#
+#                        #        at.roost +
+#                        # 
+#                         (1|group),
+#                      data=rank_sub_m,
+#                      na.action="na.omit",
+#                      control=lmerControl(optimizer="bobyqa",
+#                                         optCtrl=list(maxfun=2e5)),)
+# summary(predict.rank.m.2019)
+# afurl <- "https://raw.githubusercontent.com/lme4/lme4/master/misc/issues/allFit.R"
+# eval(parse(text=getURL(afurl)))
+# aa <- allFit(predict.rank)
+# 
+# is.OK <- sapply(aa,is,"merMod")  
+# aa.OK <- aa[is.OK]
+# lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
 
 rank.CG.m.2022$roost <- roost_2022$roost[match(rank.CG.m.2022$ID,roost_2022$ID)]
 rank.CG.m.2022$group <-"CG 2022"
@@ -1126,7 +1121,7 @@ rank_tot_m <- rbind(rank_sub_m[,1:7],rank.CG.m.2022[,2:ncol(rank.CG.m.2022)])
 predict.rank.m.tot <- lmer(st_rank ~ age+#at.roost #+
                              #(1|ID) +
                              (1|group),
-                           ,data=rank_sub_m,
+                           data=rank_tot_m,
                            na.action="na.omit",
                            control=lmerControl(optimizer="bobyqa",
                                                optCtrl=list(maxfun=2e5)),)
