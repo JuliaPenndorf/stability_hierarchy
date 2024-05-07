@@ -17,7 +17,7 @@ library(DynaRankR)
 agg_2019 <- read.csv('soc_data_2019.csv',stringsAsFactors = F)
 agg_2022 <- read.csv('agg_data_cleaned.csv',stringsAsFactors = F)
 sexing_gen_2019 <-read.csv('Vector_IDs_15July.csv',stringsAsFactors = F)
-sexing_eye_2019 <-read.csv2('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
+sexing_eye_2019 <-read.csv('Marking_sheet_MASTER_corrected.csv',stringsAsFactors = F)
 
 relatedness <- read.csv('self_relatedness.csv',stringsAsFactors = F)
 ids <- make.unique(relatedness$X)
@@ -368,3 +368,43 @@ mean(similarity_random_females)
 sd(similarity_random_females)
 
 
+
+# subsetting to adults 
+CG_2019_ad <- CG_2019_sub[which(CG_2019_sub$Age=="A"),]
+CG_2022_ad <- CG_2022_sub[which(CG_2022_sub$Age=="A"),]
+similarity_years_ad <- NA
+
+elo_CG_2019_ad <- elo_CG_2019[which(rownames(elo_CG_2019) %in% CG_2019_ad$ID),]
+elo_CG_2022_ad <- elo_CG_2022[which(rownames(elo_CG_2022) %in% rownames(CG_2022_ad)),]
+
+x <- agg_both$ID_2019[match(rownames(elo_CG_2022_ad),agg_both$ID_2022)]
+rownames(elo_CG_2022_ad) <- x
+
+for (i in 1:ncol(elo_CG_2019_ad)) {
+  rank_CG_2019_ov <- as.data.frame(elo_CG_2019_ad[,i])
+  rank_CG_2019_ov$id <- rownames(elo_CG_2019_ad)
+  rank_CG_2019_ov$rank <- rank(-rank_CG_2019_ov[,1])
+  rank_CG_2019 <- rank_CG_2019_ov %>% arrange(desc(-rank_CG_2019_ov$rank),decreasing=F)
+  
+  rank_CG_2022_ov <- as.data.frame(elo_CG_2022_ad[,i])
+  rank_CG_2022_ov$id <- rownames(elo_CG_2022_ad)
+  rank_CG_2022_ov$rank <- rank(-rank_CG_2022_ov[,1])
+  rank_CG_2022 <- rank_CG_2022_ov %>% arrange(desc(-rank_CG_2022_ov$rank),decreasing=F)
+  
+  
+  similarity_years_ad[i] <- dyadic_similarity(rank_CG_2019$id, rank_CG_2022$id)
+  
+}
+
+similarity_random_ad <- NA
+for (i in 1:10000) {
+  random_2019<- sample(rank_CG_2019$id,size=nrow(rank_CG_2019),replace=F)
+  random_2022 <- sample(rank_CG_2022$id,size=nrow(rank_CG_2022),replace=F)
+  similarity_random_ad[i] <- dyadic_similarity(random_2019, random_2022)
+}
+
+mean(similarity_years_ad)
+sd(similarity_years_ad)
+
+mean(similarity_random_ad)
+sd(similarity_random_ad)
